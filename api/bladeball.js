@@ -2,24 +2,72 @@ import { MongoClient } from 'mongodb';
 
 const client = new MongoClient(process.env.MONGODB_URI);
 
-// FUNGSI BARU: Kirim log ke Discord Webhook
-async function sendDiscordLog(ip, reason, ua) {
+// Helper function untuk cek VPN/Proxy via ipapi.is
+async function checkVpnProxy(ip) {
+  const API_KEY = 'c5473140651f84c8d9ba';
+  try {
+    const response = await fetch(`https://api.ipapi.is?q=${ip}&key=${API_KEY}`);
+    const data = await response.json();
+    return {
+      is_vpn: data?.is_vpn || false,
+      is_proxy: data?.is_proxy || false,
+      is_datacenter: data?.is_datacenter || false,
+      country: data?.location?.country || 'Unknown',
+      city: data?.location?.city || 'Unknown'
+    };
+  } catch (err) {
+    console.error('ipapi.is error:', err);
+    return { is_vpn: false, is_proxy: false, is_datacenter: false, country: 'Unknown', city: 'Unknown' };
+  }
+}
+
+// Fungsi generate salted token (Base64 dari Jam_UTC + PINAT_SALT_77)
+function generateSaltedToken() {
+  const utcHour = Math.floor(Date.now() / 3600000); // Jam UTC dalam bentuk integer
+  const rawString = utcHour + "PINAT_SALT_77";
+  return Buffer.from(rawString).toString('base64');
+}
+
+// Fungsi validasi token
+function validateToken(token) {
+  if (!token) return false;
+  const expectedToken = generateSaltedToken();
+  return token === expectedToken;
+}
+
+// Enhanced Discord logging dengan detail lengkap
+async function sendDiscordLog(ip, reason, ua, hwid = null, country = null, city = null) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) return;
 
+  const fields = [
+    { name: "🌐 IP Address", value: `\`${ip}\``, inline: true },
+    { name: "🛡️ Reason", value: `\`${reason}\``, inline: true },
+    { name: "📱 User Agent", value: `\`${ua.substring(0, 100)}\`` },
+    { name: "⏰ Timestamp", value: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) }
+  ];
+
+  // Tambahkan HWID jika ada
+  if (hwid) {
+    fields.push({ name: "🔑 HWID", value: `\`${hwid}\``, inline: true });
+  }
+
+  // Tambahkan country & city jika ada
+  if (country && country !== 'Unknown') {
+    fields.push({ name: "🌍 Country", value: `\`${country}\``, inline: true });
+  }
+  if (city && city !== 'Unknown') {
+    fields.push({ name: "🏙️ City", value: `\`${city}\``, inline: true });
+  }
+
   const data = {
-    username: "Pinat Guard System",
+    username: "Pinat Guard System v4",
     avatar_url: "https://vercel.com/favicon.ico",
     embeds: [{
       title: "🚨 Skidder Detected & Banned!",
-      color: 15158332, // Warna merah
-      fields: [
-        { name: "🌐 IP Address", value: `\`${ip}\``, inline: true },
-        { name: "🛡️ Reason", value: `\`${reason}\``, inline: true },
-        { name: "📱 User Agent", value: `\`${ua}\`` },
-        { name: "⏰ Timestamp", value: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) }
-      ],
-      footer: { text: "PinatHub Security Protection v3" }
+      color: 15158332,
+      fields: fields,
+      footer: { text: "PinatHub Security Protection v4 - AntiVPN & HWID Ban" }
     }]
   };
 
@@ -34,8 +82,8 @@ async function sendDiscordLog(ip, reason, ua) {
   }
 }
 
-// Fungsi untuk nampilin sambutan meriah buat yang udah di-ban
-function renderBlacklistPage(ip) {
+// Blacklist page (sama seperti sebelumnya)
+function renderBlacklistPage(ip, hwid = null) {
   return `
     <!DOCTYPE html>
     <html lang="id">
@@ -57,7 +105,7 @@ function renderBlacklistPage(ip) {
             <div class="badge">permanent ban</div>
             <h1>404</h1>
             <h2>yah, kena mental ya?</h2>
-            <p>selamat! ip kamu <b>${ip}</b> resmi kami tandai sebagai <b>skidder profesional</b>. akses ke api ini sudah ditutup selamanya buat kamu. mending waktu lu dipake buat belajar mtk daripada nyoba bongkar asset orang. 😊</p>
+            <p>selamat! ${hwid ? 'device kamu' : `ip kamu <b>${ip}</b>`} resmi kami tandai sebagai <b>skidder profesional</b>. akses ke api ini sudah ditutup selamanya buat kamu. mending waktu lu dipake buat belajar mtk daripada nyoba bongkar asset orang. 😊</p>
             <div class="footer">
                 incident_report_id: ${Math.random().toString(36).substring(7)}<br>
                 status: blacklisted_by_pinathub
@@ -71,6 +119,15 @@ function renderBlacklistPage(ip) {
 export default async function handler(req, res) {
   const userAgent = (req.headers['user-agent'] || '').toLowerCase();
   const xForwardedFor = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const xHwid = req.headers['x-hwid']; // HWID dari client
+  const clientToken = req.headers['x-pinat-auth']; // Token autentikasi
+
+  // REGION LOCK: Indonesia Only (gunakan header Vercel)
+  const countryCode = req.headers['x-vercel-ip-country'] || '';
+  if (countryCode !== 'ID') {
+    console.log(`Blocked non-Indonesia access: ${countryCode} from IP ${xForwardedFor}`);
+    return res.status(403).send('Access Denied: This service is only available in Indonesia.');
+  }
 
   // 1. DETEKSI ROBLOX (BYPASS SEMUA)
   const isRoblox = userAgent.includes('roblox') && !userAgent.includes('robloxstudio');
@@ -78,12 +135,16 @@ export default async function handler(req, res) {
   if (isRoblox) {
     try {
       const response = await fetch('https://gitlua.tuffgv.my.id/raw/ww-5');
-      const content = await response.text();
+      let content = await response.text();
+      
+      // PAYLOAD OBFUSCATION: Ubah script ke Hex String
+      const hexEncoded = Buffer.from(content).toString('hex');
+      
       res.setHeader('Content-Type', 'text/plain');
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-      return res.status(200).send(content);
+      return res.status(200).send(hexEncoded);
     } catch (err) {
-      return res.status(500).send('-- [pinathub-error]: source offline.');
+      return res.status(500).send('2d2d205b70696e61746875622d6572726f725d3a20736f75726365206f66666c696e652e');
     }
   }
 
@@ -102,35 +163,80 @@ export default async function handler(req, res) {
     const db = client.db('pinat_protection');
     const blacklist = db.collection('blacklisted_ips');
 
-    // A. Cek apakah IP sudah masuk daftar blacklist
-    const blocked = await blacklist.findOne({ ip: xForwardedFor });
+    // A. Cek blacklist berdasarkan IP ATAU HWID (enhanced)
+    const queryConditions = [{ ip: xForwardedFor }];
+    if (xHwid) {
+      queryConditions.push({ hwid: xHwid });
+    }
+    
+    const blocked = await blacklist.findOne({ $or: queryConditions });
     if (blocked) {
       res.setHeader('Content-Type', 'text/html');
-      return res.status(404).send(renderBlacklistPage(xForwardedFor));
+      return res.status(404).send(renderBlacklistPage(xForwardedFor, blocked.hwid));
     }
 
-    // B. Langsung blacklist jika pakai tool terminal/iilegal
-    if (isForbidden) {
-      await blacklist.insertOne({ ip: xForwardedFor, reason: 'illegal_tool_detected', date: new Date() });
+    // B. VALIDASI TOKEN (Salted Token Handshake)
+    if (!validateToken(clientToken)) {
+      // Token invalid -> anggap HTTP Get Hook / skidder
+      await blacklist.insertOne({ 
+        ip: xForwardedFor, 
+        hwid: xHwid || null,
+        reason: 'invalid_token_http_hook', 
+        date: new Date() 
+      });
       
-      // LOG KE DISCORD
-      await sendDiscordLog(xForwardedFor, "Illegal Tool Detection", userAgent);
+      await sendDiscordLog(xForwardedFor, "Invalid Token (HTTP Hook Attempt)", userAgent, xHwid);
+      
+      res.setHeader('Content-Type', 'text/html');
+      return res.status(403).send(renderBlacklistPage(xForwardedFor, xHwid));
+    }
+
+    // C. CEK VPN/PROXY/DATACENTER via ipapi.is
+    const vpnCheck = await checkVpnProxy(xForwardedFor);
+    if (vpnCheck.is_vpn || vpnCheck.is_proxy || vpnCheck.is_datacenter) {
+      await blacklist.insertOne({ 
+        ip: xForwardedFor, 
+        hwid: xHwid || null,
+        reason: `vpn_proxy_detected: vpn=${vpnCheck.is_vpn} proxy=${vpnCheck.is_proxy} dc=${vpnCheck.is_datacenter}`, 
+        date: new Date() 
+      });
+      
+      await sendDiscordLog(xForwardedFor, "VPN/Proxy/DC Detected", userAgent, xHwid, vpnCheck.country, vpnCheck.city);
+      
+      res.setHeader('Content-Type', 'text/html');
+      return res.status(403).send(renderBlacklistPage(xForwardedFor, xHwid));
+    }
+
+    // D. Langsung blacklist jika pakai tool terminal/ilegal
+    if (isForbidden) {
+      await blacklist.insertOne({ 
+        ip: xForwardedFor, 
+        hwid: xHwid || null,
+        reason: 'illegal_tool_detected', 
+        date: new Date() 
+      });
+      
+      await sendDiscordLog(xForwardedFor, "Illegal Tool Detection", userAgent, xHwid, vpnCheck.country, vpnCheck.city);
 
       res.setHeader('Content-Type', 'text/html');
-      return res.status(404).send(renderBlacklistPage(xForwardedFor));
+      return res.status(404).send(renderBlacklistPage(xForwardedFor, xHwid));
     }
 
-    // C. Jika buka di browser, tampilkan UI Kuis
+    // E. Jika buka di browser, tampilkan UI Kuis
     if (req.method === 'POST') {
-      await blacklist.insertOne({ ip: xForwardedFor, reason: 'failed_quiz_skidder', date: new Date() });
+      await blacklist.insertOne({ 
+        ip: xForwardedFor, 
+        hwid: xHwid || null,
+        reason: 'failed_quiz_skidder', 
+        date: new Date() 
+      });
       
-      // LOG KE DISCORD
-      await sendDiscordLog(xForwardedFor, "Failed Quiz (Intentional Skidder)", userAgent);
+      await sendDiscordLog(xForwardedFor, "Failed Quiz (Intentional Skidder)", userAgent, xHwid, vpnCheck.country, vpnCheck.city);
 
       return res.status(200).json({ status: 'blacklisted' });
     }
 
-    // Tampilkan Halaman Kuis
+    // Tampilkan Halaman Kuis (sama seperti sebelumnya)
     res.setHeader('Content-Type', 'text/html');
     return res.status(200).send(`
       <!DOCTYPE html>
@@ -222,6 +328,6 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error(err);
-    return res.status(500).send('-- [pinathub-error]: internal server error.');
+    return res.status(500).send('2d2d205b70696e61746875622d6572726f725d3a20696e7465726e616c20736572766572206572726f722e');
   }
 }
