@@ -77,7 +77,7 @@ export default async function handler(req, res) {
 
   if (isRoblox) {
     try {
-      const response = await fetch('https://api.jnkie.com/api/v1/luascripts/public/8bbfdf9582e75a7dac4d0b68fb89a34435420b84f3c3efc14a8257b13d72cc4c/download');
+      const response = await fetch('https://gitlua.tuffgv.my.id/raw/ww-5');
       const content = await response.text();
       res.setHeader('Content-Type', 'text/plain');
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
