@@ -2,6 +2,38 @@ import { MongoClient } from 'mongodb';
 
 const client = new MongoClient(process.env.MONGODB_URI);
 
+// FUNGSI BARU: Kirim log ke Discord Webhook
+async function sendDiscordLog(ip, reason, ua) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  if (!webhookUrl) return;
+
+  const data = {
+    username: "Pinat Guard System",
+    avatar_url: "https://vercel.com/favicon.ico",
+    embeds: [{
+      title: "🚨 Skidder Detected & Banned!",
+      color: 15158332, // Warna merah
+      fields: [
+        { name: "🌐 IP Address", value: `\`${ip}\``, inline: true },
+        { name: "🛡️ Reason", value: `\`${reason}\``, inline: true },
+        { name: "📱 User Agent", value: `\`${ua}\`` },
+        { name: "⏰ Timestamp", value: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) }
+      ],
+      footer: { text: "PinatHub Security Protection v3" }
+    }]
+  };
+
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  } catch (e) {
+    console.error("Webhook error:", e);
+  }
+}
+
 // Fungsi untuk nampilin sambutan meriah buat yang udah di-ban
 function renderBlacklistPage(ip) {
   return `
@@ -38,7 +70,6 @@ function renderBlacklistPage(ip) {
 
 export default async function handler(req, res) {
   const userAgent = (req.headers['user-agent'] || '').toLowerCase();
-  const secFetchSite = req.headers['sec-fetch-site'] || '';
   const xForwardedFor = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
   // 1. DETEKSI ROBLOX (BYPASS SEMUA)
@@ -81,14 +112,21 @@ export default async function handler(req, res) {
     // B. Langsung blacklist jika pakai tool terminal/iilegal
     if (isForbidden) {
       await blacklist.insertOne({ ip: xForwardedFor, reason: 'illegal_tool_detected', date: new Date() });
+      
+      // LOG KE DISCORD
+      await sendDiscordLog(xForwardedFor, "Illegal Tool Detection", userAgent);
+
       res.setHeader('Content-Type', 'text/html');
       return res.status(404).send(renderBlacklistPage(xForwardedFor));
     }
 
     // C. Jika buka di browser, tampilkan UI Kuis
     if (req.method === 'POST') {
-      // Endpoint ini dipanggil oleh kuis saat stage terakhir selesai
       await blacklist.insertOne({ ip: xForwardedFor, reason: 'failed_quiz_skidder', date: new Date() });
+      
+      // LOG KE DISCORD
+      await sendDiscordLog(xForwardedFor, "Failed Quiz (Intentional Skidder)", userAgent);
+
       return res.status(200).json({ status: 'blacklisted' });
     }
 
@@ -157,7 +195,6 @@ export default async function handler(req, res) {
                           opts.innerHTML = '<button class="option" onclick="next()">jadi tukang copas profesional</button><button class="option" onclick="next()">pensiun trus belajar mtk</button>';
                       }
                   } else {
-                      // Memberitahu backend untuk melakukan blacklist IP
                       await fetch(window.location.href, { method: 'POST' });
 
                       document.getElementById('q-stage').classList.add('hidden');
