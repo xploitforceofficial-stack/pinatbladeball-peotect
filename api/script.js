@@ -1,14 +1,46 @@
 import { MongoClient } from 'mongodb';
 
-// Konfigurasi MongoDB dari Environment Variable Vercel
 const client = new MongoClient(process.env.MONGODB_URI);
+
+// fungsi untuk nampilin sambutan meriah buat yang udah di-ban
+function renderBlacklistPage(ip) {
+  return `
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <title>404 - deployment not found</title>
+        <style>
+            body { background: #fff; color: #000; font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
+            .content { max-width: 500px; padding: 20px; }
+            h1 { font-size: 64px; font-weight: 700; margin: 0; letter-spacing: -2px; }
+            h2 { font-size: 24px; font-weight: 600; margin: 10px 0; }
+            p { color: #666; font-size: 14px; line-height: 1.6; }
+            .badge { background: #ff0000; color: #fff; padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 20px; display: inline-block; }
+            .footer { margin-top: 40px; font-size: 12px; color: #ccc; border-top: 1px solid #eaeaea; padding-top: 20px; font-family: monospace; }
+        </style>
+    </head>
+    <body>
+        <div class="content">
+            <div class="badge">permanent ban</div>
+            <h1>404</h1>
+            <h2>yah, kena mental ya?</h2>
+            <p>selamat! ip kamu <b>${ip}</b> resmi kami tandai sebagai <b>skidder profesional</b>. akses ke api ini sudah ditutup selamanya buat kamu. mending waktu lu dipake buat belajar mtk daripada nyoba bongkar asset orang. 😊</p>
+            <div class="footer">
+                incident_report_id: ${Math.random().toString(36).substring(7)}<br>
+                status: blacklisted_by_pinathub
+            </div>
+        </div>
+    </body>
+    </html>
+  `;
+}
 
 export default async function handler(req, res) {
   const userAgent = (req.headers['user-agent'] || '').toLowerCase();
   const secFetchSite = req.headers['sec-fetch-site'] || '';
   const xForwardedFor = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-  // Daftar blacklist tools
   const forbiddenTools = [
     'curl', 'wget', 'powershell', 'powershell-core', 'pwsh', 'vscode', 
     'insomnia', 'postman', 'python', 'python-requests', 'node-fetch', 
@@ -24,22 +56,24 @@ export default async function handler(req, res) {
     const db = client.db('pinat_protection');
     const blacklist = db.collection('blacklisted_ips');
 
-    // 1. Cek apakah IP sudah di-blacklist
+    // 1. Cek status blacklist
     const blocked = await blacklist.findOne({ ip: xForwardedFor });
     if (blocked) {
-      return res.status(404).end(); // Kirim 404 murni
+      // kalo udah di-ban, kasih sambutan meriah (tetap kirim 404 tapi ada isinya)
+      res.setHeader('Content-Type', 'text/html');
+      return res.status(404).send(renderBlacklistPage(xForwardedFor));
     }
 
-    // 2. Logika Blacklist Otomatis (Jika pakai Tool Ilegal)
+    // 2. Blacklist otomatis jika pake tool terminal
     if (isForbidden && !isRoblox) {
       await blacklist.insertOne({ ip: xForwardedFor, reason: 'illegal_tool', date: new Date() });
-      return res.status(404).end();
+      res.setHeader('Content-Type', 'text/html');
+      return res.status(404).send(renderBlacklistPage(xForwardedFor));
     }
 
-    // 3. Logika untuk Kuis / Browser
+    // 3. UI Kuis / Browser
     if (!isRoblox || secFetchSite === 'same-origin') {
       
-      // Jika frontend mengirim request untuk blacklist (setelah kuis selesai)
       if (req.method === 'POST') {
         await blacklist.insertOne({ ip: xForwardedFor, reason: 'failed_quiz_skidder', date: new Date() });
         return res.status(200).json({ status: 'blacklisted' });
@@ -79,7 +113,7 @@ export default async function handler(req, res) {
                 <div id="q-stage">
                     <div class="step">security_check • stage <span id="step-num">1</span>/3</div>
                     <h1 id="q-text">deteksi akses ilegal..</h1>
-                    <p id="q-sub">kami mendeteksi kaka pake ${isForbidden ? 'terminal/tools' : 'browser'}. silakan verifikasi kalo kaka bukan skidder.</p>
+                    <p id="q-sub">kami mendeteksi kaka pake browser. silakan verifikasi kalo kaka bukan skidder.</p>
                     <div id="options-alt">
                         <button class="option" onclick="next()">saya cuma mau liat source code kak</button>
                         <button class="option" onclick="next()">saya mau ganti nama owner scriptnya</button>
@@ -110,7 +144,6 @@ export default async function handler(req, res) {
                             opts.innerHTML = '<button class="option" onclick="next()">jadi tukang copas profesional</button><button class="option" onclick="next()">pensiun trus belajar mtk</button>';
                         }
                     } else {
-                        // Kirim sinyal ke API untuk blacklist IP ini selamanya
                         fetch(window.location.href, { method: 'POST' });
 
                         document.getElementById('q-stage').classList.add('hidden');
@@ -138,17 +171,18 @@ export default async function handler(req, res) {
       `);
     }
 
-    // 4. Bagian akses aman (Hanya Roblox)
+    // 4. Akses aman Roblox
     const response = await fetch('https://gitlua.tuffgv.my.id/raw/www-1');
     const content = await response.text();
 
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
     
     return res.status(200).send(content);
 
   } catch (err) {
     return res.status(500).send('-- [pinathub-error]: system failure.');
+  } finally {
+      // client.close(); // Opsional: tutup koneksi jika tidak pakai connection pooling
   }
 }
