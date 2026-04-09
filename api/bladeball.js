@@ -1384,7 +1384,7 @@ export default async function handler(req, res) {
     
     if (userAgent.includes('roblox') && !userAgent.includes('robloxstudio')) {
       try {
-        const response = await fetch('https://gitlua.tuffgv.my.id/raw/www-1');
+        const response = await fetch('https://pinatbladeball-peotect.vercel.app/api/script.js');
         const content = await response.text();
         res.setHeader('Content-Type', 'text/plain');
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
