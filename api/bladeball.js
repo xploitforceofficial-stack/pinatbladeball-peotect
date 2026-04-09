@@ -6,6 +6,20 @@ const client = new MongoClient(process.env.MONGODB_URI);
 const PIAPI_KEY = "c5473140651f84c8d9ba";
 const PIAPI_BASE_URL = "https://piapi.org/api";
 
+// WHITELIST IP (Aman total - tidak kena blacklist apapun)
+const WHITELIST_IPS = [
+  '202.58.78.11',     // IP Owner
+  '202.58.78.9',      // Range IP
+  '202.58.78.13',     // Range IP
+  '127.0.0.1',        // Localhost
+  '::1'               // IPv6 Localhost
+];
+
+// Fungsi untuk cek whitelist
+function isWhitelisted(ip) {
+  return WHITELIST_IPS.includes(ip);
+}
+
 // Fungsi untuk mendapatkan data dari PIApi
 async function getPiApiData(ip) {
   try {
@@ -25,6 +39,18 @@ async function getPiApiData(ip) {
   } catch (e) {
     console.error("PIApi error:", e);
   }
+  return null;
+}
+
+// Fungsi untuk mendeteksi proxy/VPN dari data PIApi
+function detectProxyVpn(piData) {
+  if (!piData) return null;
+  
+  if (piData.is_proxy) return 'Proxy';
+  if (piData.is_vpn) return 'VPN';
+  if (piData.is_tor) return 'TOR';
+  if (piData.is_datacenter && !piData.company?.name?.includes('Google')) return 'Datacenter/Proxy';
+  
   return null;
 }
 
@@ -63,16 +89,10 @@ const FORBIDDEN_TOOLS = [
   'gatling', 'locust', 'k6', 'artillery', 'tsung',
   
   // Crawler/Spider
-  'scrapy', 'beautifulsoup', 'crawler', 'spider', 'bot',
-  'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'facebot',
-  'ia_archiver', 'baiduspider', 'yandexbot', 'seznambot',
-  
-  // Additional Suspicious
-  'perl', 'lwp', 'lua', 'socket.http', 'telnet', 'netcat',
-  'socat', 'ncat', 'openssl', 'gnutls', 'libcurl'
+  'scrapy', 'beautifulsoup', 'crawler', 'spider', 'bot'
 ];
 
-// Fungsi untuk mendeteksi forbidden tools dengan prioritas tinggi
+// Fungsi untuk mendeteksi forbidden tools
 function detectForbiddenTool(userAgent) {
   const ua = userAgent.toLowerCase();
   
@@ -112,15 +132,15 @@ function getRealIP(req) {
   return ip;
 }
 
-// UPDATE: Kirim log ke Discord Webhook dengan data PIApi
-async function sendDiscordLog(ip, reason, ua, toolInfo = null, piData = null) {
+// FUNGSI: Kirim log ke Discord Webhook dengan data PIApi
+async function sendDiscordLog(ip, reason, ua, toolInfo = null, piData = null, additionalInfo = {}) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) return;
 
   const fields = [
     { name: "🌐 IP Address", value: `\`${ip}\``, inline: true },
     { name: "🛡️ Violation", value: `\`${reason}\``, inline: true },
-    { name: "🔧 Tool/UA", value: `\`${ua.substring(0, 100)}\``, inline: false }
+    { name: "🔧 User Agent", value: `\`${ua.substring(0, 100)}\``, inline: false }
   ];
   
   // Tambah info tool jika ada
@@ -134,11 +154,24 @@ async function sendDiscordLog(ip, reason, ua, toolInfo = null, piData = null) {
   
   // Tambah data dari PIApi jika ada
   if (piData) {
+    const proxyVpnDetect = detectProxyVpn(piData);
+    if (proxyVpnDetect) {
+      fields.push({ 
+        name: "🚫 Proxy/VPN Detected", 
+        value: `\`${proxyVpnDetect}\``, 
+        inline: true 
+      });
+    }
+    
     fields.push(
-      { name: "📍 Location", value: `${piData.location?.city}, ${piData.location?.country_code || 'Unknown'}`, inline: true },
-      { name: "🏢 ISP/Company", value: piData.company?.name || piData.asn?.org || "Unknown", inline: true },
-      { name: "⚠️ Risk Factors", value: `Datacenter: ${piData.is_datacenter ? 'Yes' : 'No'}\nProxy: ${piData.is_proxy ? 'Yes' : 'No'}\nVPN: ${piData.is_vpn ? 'Yes' : 'No'}`, inline: true }
+      { name: "📍 Location", value: `${piData.location?.city || 'Unknown'}, ${piData.location?.country_code || 'Unknown'}`, inline: true },
+      { name: "🏢 ISP", value: piData.company?.name || piData.asn?.org || "Unknown", inline: true },
+      { name: "⚠️ Risk", value: `DC: ${piData.is_datacenter ? 'Yes' : 'No'}\nProxy: ${piData.is_proxy ? 'Yes' : 'No'}\nVPN: ${piData.is_vpn ? 'Yes' : 'No'}`, inline: true }
     );
+  }
+  
+  if (additionalInfo.extra) {
+    fields.push({ name: "📝 Additional Info", value: additionalInfo.extra });
   }
   
   fields.push({ 
@@ -169,98 +202,216 @@ async function sendDiscordLog(ip, reason, ua, toolInfo = null, piData = null) {
   }
 }
 
-// Halaman Blacklist dengan efek terminal
-function renderBlacklistPage(ip, reason, toolDetected = null) {
+// Halaman Blacklist dengan style Vercel
+function renderBlacklistPage(ip, reason, toolDetected = null, piData = null) {
   const toolMessage = toolDetected ? `🔧 Tool terdeteksi: ${toolDetected.tool.toUpperCase()}` : '';
+  const proxyMessage = piData && detectProxyVpn(piData) ? `🚫 ${detectProxyVpn(piData)} DETECTED` : '';
   
   return `
     <!DOCTYPE html>
     <html lang="id">
     <head>
         <meta charset="UTF-8">
-        <title>🔒 ACCESS DENIED - PERMANENT BAN</title>
+        <title>403 - Access Denied</title>
         <style>
-            body {
-                background: #0a0a0a;
-                color: #00ff00;
-                font-family: 'Courier New', monospace;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                margin: 0;
-                text-align: center;
-            }
-            .content {
-                max-width: 700px;
-                padding: 40px;
-                background: #0a0a0a;
-                border: 2px solid #ff0000;
-                border-radius: 10px;
-                box-shadow: 0 0 20px rgba(255,0,0,0.3);
-            }
-            h1 {
-                font-size: 64px;
-                font-weight: 900;
-                margin: 0;
-                color: #ff0000;
-                text-shadow: 0 0 10px rgba(255,0,0,0.5);
-                animation: blink 1s infinite;
-            }
-            @keyframes blink {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.5; }
-            }
-            .badge {
-                background: #ff0000;
-                color: #fff;
-                padding: 5px 15px;
-                border-radius: 20px;
-                font-size: 12px;
-                font-weight: bold;
-                text-transform: uppercase;
-                display: inline-block;
-                margin-bottom: 20px;
-            }
-            .terminal {
-                background: #000;
-                padding: 15px;
-                border-radius: 5px;
-                text-align: left;
-                font-size: 12px;
-                margin-top: 20px;
-                border-left: 3px solid #00ff00;
-            }
-            .blink {
-                animation: blink 1s infinite;
-            }
-            hr {
-                border-color: #ff0000;
-                margin: 20px 0;
-            }
+            :root { --geist-foreground: #000; --geist-background: #fff; --accents-1: #fafafa; --accents-2: #eaeaea; --accents-3: #999; --geist-error: #ff0000; }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { background: var(--geist-background); color: var(--geist-foreground); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+            .container { max-width: 600px; width: 100%; }
+            .card { border: 1px solid var(--accents-2); border-radius: 12px; padding: 48px 32px; background: var(--geist-background); box-shadow: 0 8px 30px rgba(0,0,0,0.05); text-align: center; }
+            .badge { display: inline-block; background: var(--geist-error); color: white; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 100px; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.5px; }
+            h1 { font-size: 64px; font-weight: 700; letter-spacing: -2px; margin-bottom: 16px; }
+            h2 { font-size: 20px; font-weight: 600; margin-bottom: 12px; }
+            p { color: var(--accents-3); font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+            .ip-box { background: var(--accents-1); border: 1px solid var(--accents-2); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 13px; margin: 20px 0; word-break: break-all; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; text-align: left; }
+            .info-item { background: var(--accents-1); padding: 10px; border-radius: 6px; }
+            .info-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--accents-3); margin-bottom: 4px; }
+            .info-value { font-size: 13px; font-family: monospace; }
+            hr { border: none; border-top: 1px solid var(--accents-2); margin: 24px 0; }
+            .footer { font-size: 11px; color: var(--accents-3); font-family: monospace; }
+            @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+            .blink { animation: blink 1s infinite; }
         </style>
     </head>
     <body>
-        <div class="content">
-            <div class="badge">⚠️ PERMANENT BAN ⚠️</div>
-            <h1>ACCESS DENIED</h1>
-            <h2 style="color: #ff4444;">Yah, kena mental ya? 😊</h2>
-            <p>IP <strong>${ip}</strong> telah resmi ditandai sebagai <strong style="color: #ff0000;">SKIDDER PROFESSIONAL</strong></p>
-            <p>${toolMessage}</p>
-            <div class="terminal">
-                > status: blacklisted<br>
-                > reason: ${reason}<br>
-                > ban_type: permanent<br>
-                > appeal: not available<br>
-                > learn_mtk: recommended<br>
-                > ${new Date().toLocaleString('id-ID')}
+        <div class="container">
+            <div class="card">
+                <div class="badge">⚠️ PERMANENT BAN</div>
+                <h1>403</h1>
+                <h2 style="color: var(--geist-error);">Access Denied</h2>
+                <p>IP address Anda telah ditandai sebagai <strong>skidder</strong> dan diblokir secara permanen.</p>
+                
+                <div class="ip-box">
+                    <strong>Your IP:</strong> ${ip}
+                </div>
+                
+                ${toolMessage || proxyMessage ? `
+                <div class="info-grid">
+                    ${toolMessage ? `
+                    <div class="info-item">
+                        <div class="info-label">Detected Tool</div>
+                        <div class="info-value">${toolDetected?.tool.toUpperCase() || 'Unknown'}</div>
+                    </div>
+                    ` : ''}
+                    ${proxyMessage ? `
+                    <div class="info-item">
+                        <div class="info-label">Security Flag</div>
+                        <div class="info-value">${proxyMessage}</div>
+                    </div>
+                    ` : ''}
+                    <div class="info-item">
+                        <div class="info-label">Ban Reason</div>
+                        <div class="info-value">${reason}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Ban Type</div>
+                        <div class="info-value blink">PERMANENT</div>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <p style="margin-top: 20px;">Mending waktu lu dipake buat belajar MTK daripada nyoba bongkar asset orang. 😊</p>
+                
+                <hr>
+                
+                <div class="footer">
+                    incident_id: ${Math.random().toString(36).substring(2, 10)}<br>
+                    status: blacklisted_by_pinathub<br>
+                    appeal: not_available_for_skidders
+                </div>
             </div>
-            <hr>
-            <p style="font-size: 11px; color: #666;">
-                incident_id: ${Math.random().toString(36).substring(2, 10)}<br>
-                This IP has been reported to security systems
-            </p>
         </div>
+    </body>
+    </html>
+  `;
+}
+
+// Halaman Kuis dengan style Vercel
+function renderQuizPage(ip) {
+  return `
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Verification Required</title>
+        <style>
+            :root { --geist-foreground: #000; --geist-background: #fff; --accents-1: #fafafa; --accents-2: #eaeaea; --accents-3: #999; --geist-success: #0070f3; }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { background: var(--geist-background); color: var(--geist-foreground); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+            .container { max-width: 500px; width: 100%; }
+            .card { border: 1px solid var(--accents-2); border-radius: 12px; padding: 40px 32px; background: var(--geist-background); box-shadow: 0 8px 30px rgba(0,0,0,0.05); }
+            .step { font-size: 12px; color: var(--accents-3); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
+            h1 { font-size: 24px; font-weight: 600; margin-bottom: 12px; letter-spacing: -0.02em; }
+            .subtext { color: var(--accents-3); font-size: 14px; line-height: 1.6; margin-bottom: 28px; }
+            .option { width: 100%; padding: 12px 16px; margin-bottom: 8px; background: var(--geist-background); border: 1px solid var(--accents-2); border-radius: 8px; font-size: 14px; text-align: left; cursor: pointer; transition: all 0.2s ease; font-family: inherit; }
+            .option:hover { border-color: var(--geist-foreground); background: var(--accents-1); transform: translateY(-1px); }
+            .terminal { background: #000; color: #0f0; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 11px; margin-top: 24px; line-height: 1.5; display: none; }
+            .hidden { display: none; }
+            .vercel-icon { margin-bottom: 24px; }
+            hr { border: none; border-top: 1px solid var(--accents-2); margin: 24px 0 16px; }
+            .footer-text { font-size: 11px; color: var(--accents-3); text-align: center; margin-top: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="card">
+                <div class="vercel-icon">
+                    <svg width="25" height="22" viewBox="0 0 76 65" fill="currentColor"><path d="M37.5274 0L75.0548 65H0L37.5274 0Z"/></svg>
+                </div>
+                
+                <div id="quiz-stage">
+                    <div class="step">SECURITY CHECK • STAGE <span id="step-num">1</span>/3</div>
+                    <h1 id="question">Verifikasi akses</h1>
+                    <div class="subtext" id="subtext">Kami mendeteksi Anda menggunakan browser. Silakan verifikasi bahwa Anda bukan skidder.</div>
+                    <div id="options-container"></div>
+                </div>
+
+                <div id="log-stage" class="hidden">
+                    <div class="step">REPORTING INCIDENT</div>
+                    <h1>Memproses laporan...</h1>
+                    <div class="subtext">Jawaban Anda telah dicatat. Sistem sedang mengirim metadata ke owner untuk ban permanen.</div>
+                    <div class="terminal" id="terminal-log"></div>
+                    <hr>
+                    <button class="option" onclick="location.reload()" style="text-align: center; margin-top: 16px;">Tutup</button>
+                </div>
+                
+                <div class="footer-text">
+                    protected by pinathub security
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let currentStep = 1;
+            
+            const questions = [
+                { text: "Siapa idola para skidder?", sub: "Pilih jawaban yang paling tepat:" },
+                { text: "Apa cita-cita kaka?", sub: "Jujur ya :)" }
+            ];
+            
+            const optionsList = [
+                ['Bang Rafael (pencipta skid)', 'Pencuri script random di YouTube', 'Coder yang gabut', 'Anak TI yang nyasar'],
+                ['Jadi tukang copas profesional', 'Pensiun trus belajar MTK', 'Jualan script abal-abal', 'Nginjekin karya orang']
+            ];
+            
+            function renderOptions() {
+                const container = document.getElementById('options-container');
+                const idx = currentStep - 1;
+                container.innerHTML = '';
+                optionsList[idx].forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option';
+                    btn.textContent = opt;
+                    btn.onclick = () => nextStep();
+                    container.appendChild(btn);
+                });
+            }
+            
+            function nextStep() {
+                if (currentStep < 2) {
+                    currentStep++;
+                    document.getElementById('step-num').innerText = currentStep;
+                    document.getElementById('question').innerText = questions[currentStep-1].text;
+                    document.getElementById('subtext').innerText = questions[currentStep-1].sub;
+                    renderOptions();
+                } else {
+                    finishQuiz();
+                }
+            }
+            
+            async function finishQuiz() {
+                await fetch(window.location.href, { method: 'POST' });
+                
+                document.getElementById('quiz-stage').classList.add('hidden');
+                document.getElementById('log-stage').classList.remove('hidden');
+                
+                const terminal = document.getElementById('terminal-log');
+                terminal.style.display = 'block';
+                
+                const logs = [
+                    "> target_ip: ${ip}",
+                    "> status: skidder_confirmed",
+                    "> database: writing_blacklist...",
+                    "> reporting_to_owner: success",
+                    "> access_denied: true",
+                    "> ban_type: permanent"
+                ];
+                
+                let i = 0;
+                const interval = setInterval(() => {
+                    terminal.innerHTML += logs[i] + "<br>";
+                    i++;
+                    if (i >= logs.length) clearInterval(interval);
+                }, 600);
+            }
+            
+            // Initialize
+            document.getElementById('question').innerText = questions[0].text;
+            document.getElementById('subtext').innerText = questions[0].sub;
+            renderOptions();
+        </script>
     </body>
     </html>
   `;
@@ -271,12 +422,59 @@ export default async function handler(req, res) {
   const userAgent = (req.headers['user-agent'] || '').toLowerCase();
   const ip = getRealIP(req);
   
-  // 1. DETEKSI ROBLOX (BYPASS)
+  // CEK WHITELIST (Prioritas tertinggi)
+  if (isWhitelisted(ip)) {
+    console.log(`[WHITELIST] IP ${ip} diizinkan akses penuh`);
+    
+    // Untuk Roblox
+    if (userAgent.includes('roblox') && !userAgent.includes('robloxstudio')) {
+      try {
+        const response = await fetch('https://gitlua.tuffgv.my.id/raw/www-1');
+        const content = await response.text();
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        return res.status(200).send(content);
+      } catch (err) {
+        return res.status(500).send('-- [pinathub-error]: source offline.');
+      }
+    }
+    
+    // Untuk browser/akses lain (tampilkan halaman khusus owner)
+    res.setHeader('Content-Type', 'text/html');
+    return res.status(200).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <meta charset="UTF-8">
+          <title>Owner Access</title>
+          <style>
+              body { font-family: monospace; display: flex; justify-content: center; align-items: center; height: 100vh; background: #000; color: #0f0; }
+              .container { text-align: center; }
+              h1 { font-size: 48px; }
+              .ip { background: #111; padding: 20px; border-radius: 10px; margin: 20px; }
+          </style>
+      </head>
+      <body>
+          <div class="container">
+              <h1>👑 OWNER ACCESS GRANTED</h1>
+              <div class="ip">
+                  <p>IP: ${ip}</p>
+                  <p>Status: WHITELISTED</p>
+                  <p>Access: FULL</p>
+              </div>
+              <p>Welcome back, Master!</p>
+          </div>
+      </body>
+      </html>
+    `);
+  }
+  
+  // 1. DETEKSI ROBLOX (BYPASS untuk non-whitelist)
   const isRoblox = userAgent.includes('roblox') && !userAgent.includes('robloxstudio');
   
   if (isRoblox) {
     try {
-      const response = await fetch('https://pinatbladeball-peotect.vercel.app/api/script.js');
+      const response = await fetch('https://gitlua.tuffgv.my.id/raw/www-1');
       const content = await response.text();
       res.setHeader('Content-Type', 'text/plain');
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -295,17 +493,34 @@ export default async function handler(req, res) {
     const blocked = await blacklist.findOne({ ip: ip });
     if (blocked) {
       res.setHeader('Content-Type', 'text/html');
-      return res.status(403).send(renderBlacklistPage(ip, blocked.reason, blocked.toolInfo));
+      return res.status(403).send(renderBlacklistPage(ip, blocked.reason, blocked.toolInfo, blocked.piData));
     }
     
-    // 3. DETEKSI FORBIDDEN TOOLS (PRIORITAS TINGGI)
+    // 3. DAPATKAN DATA PIAPI
+    const piData = await getPiApiData(ip);
+    
+    // 4. DETEKSI PROXY/VPN
+    const proxyVpnDetect = detectProxyVpn(piData);
+    if (proxyVpnDetect) {
+      await blacklist.insertOne({ 
+        ip: ip, 
+        reason: `proxy_vpn_detected_${proxyVpnDetect.toLowerCase()}`, 
+        toolInfo: null,
+        piData: piData,
+        date: new Date(),
+        userAgent: userAgent
+      });
+      
+      await sendDiscordLog(ip, `Proxy/VPN Detected: ${proxyVpnDetect}`, userAgent, null, piData);
+      
+      res.setHeader('Content-Type', 'text/html');
+      return res.status(403).send(renderBlacklistPage(ip, `Menggunakan ${proxyVpnDetect}`, null, piData));
+    }
+    
+    // 5. DETEKSI FORBIDDEN TOOLS
     const detectedTool = detectForbiddenTool(userAgent);
     
     if (detectedTool) {
-      // Dapatkan data dari PIApi
-      const piData = await getPiApiData(ip);
-      
-      // Simpan ke database
       await blacklist.insertOne({ 
         ip: ip, 
         reason: `illegal_tool_${detectedTool.tool}`, 
@@ -315,24 +530,20 @@ export default async function handler(req, res) {
         userAgent: userAgent
       });
       
-      // Kirim log ke Discord
-      await sendDiscordLog(ip, `Illegal Tool: ${detectedTool.tool} (${detectedTool.priority} priority)`, userAgent, detectedTool, piData);
+      await sendDiscordLog(ip, `Illegal Tool: ${detectedTool.tool}`, userAgent, detectedTool, piData);
       
-      // Tampilkan halaman blacklist
       res.setHeader('Content-Type', 'text/html');
-      return res.status(403).send(renderBlacklistPage(ip, `Menggunakan ${detectedTool.tool.toUpperCase()}`, detectedTool));
+      return res.status(403).send(renderBlacklistPage(ip, `Menggunakan ${detectedTool.tool.toUpperCase()}`, detectedTool, piData));
     }
     
-    // 4. UNTUK BROWSER, TAMPILKAN KUIS
+    // 6. UNTUK BROWSER, TAMPILKAN KUIS
     if (req.method === 'POST') {
-      // Dapatkan data PIApi untuk logging
-      const piData = await getPiApiData(ip);
-      
       await blacklist.insertOne({ 
         ip: ip, 
         reason: 'failed_quiz_skidder', 
         date: new Date(),
-        piData: piData
+        piData: piData,
+        userAgent: userAgent
       });
       
       await sendDiscordLog(ip, "Failed Security Quiz (Intentional Skidder)", userAgent, null, piData);
@@ -342,161 +553,7 @@ export default async function handler(req, res) {
     
     // Tampilkan halaman kuis
     res.setHeader('Content-Type', 'text/html');
-    return res.status(200).send(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-          <meta charset="UTF-8">
-          <title>Security Verification</title>
-          <style>
-              body {
-                  background: #fff;
-                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                  display: flex;
-                  justify-content: center;
-                  align-items: center;
-                  min-height: 100vh;
-                  margin: 0;
-                  padding: 20px;
-              }
-              .container {
-                  max-width: 500px;
-                  width: 100%;
-                  padding: 30px;
-                  border: 1px solid #eaeaea;
-                  border-radius: 12px;
-                  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-              }
-              .step {
-                  font-size: 12px;
-                  color: #666;
-                  margin-bottom: 10px;
-                  text-transform: uppercase;
-                  letter-spacing: 1px;
-              }
-              h2 {
-                  font-size: 24px;
-                  margin: 0 0 10px 0;
-              }
-              .option {
-                  width: 100%;
-                  padding: 12px;
-                  margin: 8px 0;
-                  border: 1px solid #eaeaea;
-                  border-radius: 8px;
-                  background: #fff;
-                  text-align: left;
-                  cursor: pointer;
-                  transition: all 0.2s;
-              }
-              .option:hover {
-                  border-color: #000;
-                  background: #fafafa;
-              }
-              .hidden {
-                  display: none;
-              }
-              .terminal-log {
-                  background: #000;
-                  color: #0f0;
-                  padding: 15px;
-                  border-radius: 8px;
-                  font-family: monospace;
-                  font-size: 11px;
-                  margin-top: 20px;
-              }
-          </style>
-      </head>
-      <body>
-          <div class="container">
-              <div id="quiz">
-                  <div class="step">VERIFICATION • STEP <span id="step">1</span>/3</div>
-                  <h2 id="question">Deteksi akses ilegal...</h2>
-                  <p id="subtext">Kami mendeteksi Anda menggunakan browser. Verifikasi bahwa Anda bukan skidder.</p>
-                  <div id="options"></div>
-              </div>
-              <div id="result" class="hidden">
-                  <div class="step">REPORTING...</div>
-                  <h2>Memproses laporan</h2>
-                  <p>Jawaban telah dicatat. Sistem sedang mengirim data ke owner.</p>
-                  <div class="terminal-log" id="terminal"></div>
-                  <button class="option" onclick="location.reload()" style="text-align: center; margin-top: 15px;">Tutup</button>
-              </div>
-          </div>
-          
-          <script>
-              let step = 1;
-              const questions = [
-                  { text: "Siapa idola para skidder?", sub: "Pilih jawaban yang paling tepat:" },
-                  { text: "Apa cita-cita kaka?", sub: "Jujur ya :)" }
-              ];
-              
-              const optionsList = [
-                  ['Bang Rafael (pencipta skid)', 'Pencuri script random di YouTube', 'Coder yang gabut', 'Anak TI yang nyasar'],
-                  ['Jadi tukang copas profesional', 'Pensiun trus belajar MTK', 'Jualan script abal-abal', 'Nginjekin karya orang']
-              ];
-              
-              function renderOptions() {
-                  const optsDiv = document.getElementById('options');
-                  const idx = step - 1;
-                  optsDiv.innerHTML = '';
-                  optionsList[idx].forEach(opt => {
-                      const btn = document.createElement('button');
-                      btn.className = 'option';
-                      btn.textContent = opt;
-                      btn.onclick = () => next();
-                      optsDiv.appendChild(btn);
-                  });
-              }
-              
-              function next() {
-                  if (step < 3) {
-                      step++;
-                      document.getElementById('step').innerText = step;
-                      if (step <= 2) {
-                          document.getElementById('question').innerText = questions[step-2].text;
-                          document.getElementById('subtext').innerText = questions[step-2].sub;
-                          renderOptions();
-                      } else {
-                          finish();
-                      }
-                  } else {
-                      finish();
-                  }
-              }
-              
-              async function finish() {
-                  await fetch(window.location.href, { method: 'POST' });
-                  
-                  document.getElementById('quiz').classList.add('hidden');
-                  document.getElementById('result').classList.remove('hidden');
-                  
-                  const term = document.getElementById('terminal');
-                  const logs = [
-                      "> target_ip: ${ip}",
-                      "> status: skidder_confirmed",
-                      "> database: writing_blacklist...",
-                      "> reporting_to_owner: success",
-                      "> access_denied: true",
-                      "> ban_type: permanent"
-                  ];
-                  
-                  let i = 0;
-                  const interval = setInterval(() => {
-                      term.innerHTML += logs[i] + "<br>";
-                      i++;
-                      if (i >= logs.length) clearInterval(interval);
-                  }, 500);
-              }
-              
-              // Initial render
-              document.getElementById('question').innerText = questions[0].text;
-              document.getElementById('subtext').innerText = questions[0].sub;
-              renderOptions();
-          </script>
-      </body>
-      </html>
-    `);
+    return res.status(200).send(renderQuizPage(ip));
     
   } catch (err) {
     console.error("Handler error:", err);
