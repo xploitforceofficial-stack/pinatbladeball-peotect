@@ -19,7 +19,7 @@ function isWhitelisted(ip) {
   return WHITELIST_IPS.includes(ip);
 }
 
-// PIApi data fetch
+// PIApi data fetch with more details
 async function getPiApiData(ip) {
   try {
     const response = await fetch(`${PIAPI_BASE_URL}/ip/intel`, {
@@ -71,14 +71,14 @@ const FORBIDDEN_TOOLS = [
   
   // Security Tools
   'nmap', 'masscan', 'zmap', 'hydra', 'medusa', 'ncrack', 'sqlmap', 'burpsuite', 'owasp', 'zap', 'nikto', 'wpscan',
-  'dirb', 'gobuster', 'ffuf', 'wfuzz', 'dirbuster', 'wfuzz', 'aircrack', 'john', 'hashcat', 'metasploit', 'beef',
+  'dirb', 'gobuster', 'ffuf', 'wfuzz', 'dirbuster', 'aircrack', 'john', 'hashcat', 'metasploit', 'beef',
   
   // Download Tools
   'aria2', 'axel', 'wget2', 'lwp-request', 'gdown', 'youtube-dl', 'yt-dlp', 'ffmpeg', 'rtmpdump', 'streamlink',
   
   // Crawler/Spider
   'scrapy', 'beautifulsoup', 'crawler', 'spider', 'bot', 'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider',
-  'yandexbot', 'facebot', 'ia_archiver', 'ahrefs', 'semrush', 'mj12bot', 'rogerbot', 'exabot', 'dotbot', 'spider',
+  'yandexbot', 'facebot', 'ia_archiver', 'ahrefs', 'semrush', 'mj12bot', 'rogerbot', 'exabot', 'dotbot',
   
   // Proxy/VPN tools
   'proxychains', 'torify', 'nordvpn', 'expressvpn', 'surfshark', 'protonvpn', 'openvpn', 'wireguard',
@@ -159,58 +159,216 @@ function getRealIP(req) {
   return ip;
 }
 
+// COMPREHENSIVE DISCORD WEBHOOK WITH ALL DETAILS
 async function sendDiscordLog(ip, reason, ua, toolInfo = null, piData = null, additionalInfo = {}) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) return;
 
-  const fields = [
-    { name: "🌐 IP Address", value: `\`${ip}\``, inline: true },
-    { name: "🛡️ Detection", value: `\`${reason}\``, inline: true },
-    { name: "🔧 User Agent", value: `\`${ua.substring(0, 100)}\``, inline: false }
-  ];
+  // Build comprehensive fields array
+  const fields = [];
   
-  if (toolInfo) {
-    fields.push({ 
-      name: "⚠️ Tool Detected", 
-      value: `\`${toolInfo.tool}\``, 
-      inline: true 
-    });
+  // IP Information Section
+  fields.push(
+    { name: "━━━━━━━━━━━━━━━━━━━━", value: "🌐 IP INFORMATION", inline: false },
+    { name: "📡 IP Address", value: `\`${ip}\``, inline: true },
+    { name: "🎯 Detection Reason", value: `\`${reason}\``, inline: true }
+  );
+  
+  // Timestamp
+  fields.push({
+    name: "⏰ Timestamp (UTC)",
+    value: `\`${new Date().toISOString()}\``,
+    inline: true
+  });
+  
+  // User Agent Section
+  fields.push(
+    { name: "━━━━━━━━━━━━━━━━━━━━", value: "💻 USER AGENT", inline: false },
+    { name: "🔧 Full User Agent", value: `\`\`\`${ua.substring(0, 500)}\`\`\``, inline: false }
+  );
+  
+  // Parse User Agent for more details
+  const uaLower = ua.toLowerCase();
+  const osInfo = [];
+  if (uaLower.includes('windows')) osInfo.push('Windows');
+  if (uaLower.includes('mac')) osInfo.push('macOS');
+  if (uaLower.includes('linux')) osInfo.push('Linux');
+  if (uaLower.includes('android')) osInfo.push('Android');
+  if (uaLower.includes('iphone') || uaLower.includes('ipad')) osInfo.push('iOS');
+  
+  const browserInfo = [];
+  if (uaLower.includes('chrome') && !uaLower.includes('edg')) browserInfo.push('Chrome');
+  if (uaLower.includes('firefox')) browserInfo.push('Firefox');
+  if (uaLower.includes('safari') && !uaLower.includes('chrome')) browserInfo.push('Safari');
+  if (uaLower.includes('edg')) browserInfo.push('Edge');
+  if (uaLower.includes('opera')) browserInfo.push('Opera');
+  
+  if (osInfo.length > 0) {
+    fields.push({ name: "🖥️ OS Detected", value: `\`${osInfo.join(', ')}\``, inline: true });
+  }
+  if (browserInfo.length > 0) {
+    fields.push({ name: "🌍 Browser", value: `\`${browserInfo.join(', ')}\``, inline: true });
   }
   
-  if (piData) {
-    const proxyVpnDetect = detectProxyVpn(piData);
-    if (proxyVpnDetect) {
-      fields.push({ 
-        name: "🚫 Proxy/VPN", 
-        value: `\`${proxyVpnDetect}\``, 
-        inline: true 
-      });
-    }
-    
+  // Tool Detection Section
+  if (toolInfo) {
     fields.push(
-      { name: "📍 Location", value: `${piData.location?.city || 'Unknown'}, ${piData.location?.country_code || 'Unknown'}`, inline: true },
-      { name: "🏢 ISP", value: piData.company?.name || piData.asn?.org || "Unknown", inline: true }
+      { name: "━━━━━━━━━━━━━━━━━━━━", value: "⚠️ TOOL DETECTION", inline: false },
+      { name: "🔨 Tool Name", value: `\`${toolInfo.tool.toUpperCase()}\``, inline: true },
+      { name: "📊 Priority", value: `\`${toolInfo.priority}\``, inline: true },
+      { name: "🏷️ Tool Type", value: `\`${toolInfo.type}\``, inline: true }
     );
   }
   
-  if (additionalInfo.extra) {
-    fields.push({ name: "📝 Info", value: additionalInfo.extra });
+  // PIApi Intelligence Section (Detailed)
+  if (piData) {
+    fields.push({ name: "━━━━━━━━━━━━━━━━━━━━", value: "🛡️ IP INTELLIGENCE (PIApi)", inline: false });
+    
+    // Location Details
+    if (piData.location) {
+      const locationDetails = [];
+      if (piData.location.city) locationDetails.push(`City: ${piData.location.city}`);
+      if (piData.location.region) locationDetails.push(`Region: ${piData.location.region}`);
+      if (piData.location.country) locationDetails.push(`Country: ${piData.location.country}`);
+      if (piData.location.country_code) locationDetails.push(`Code: ${piData.location.country_code}`);
+      if (piData.location.postal) locationDetails.push(`Postal: ${piData.location.postal}`);
+      if (piData.location.latitude && piData.location.longitude) {
+        locationDetails.push(`Coordinates: ${piData.location.latitude}, ${piData.location.longitude}`);
+      }
+      if (piData.location.timezone) locationDetails.push(`Timezone: ${piData.location.timezone}`);
+      
+      fields.push({
+        name: "📍 Geolocation",
+        value: `\`\`\`${locationDetails.join('\n')}\`\`\``,
+        inline: false
+      });
+    }
+    
+    // ISP/ASN Details
+    if (piData.company || piData.asn) {
+      const ispDetails = [];
+      if (piData.company?.name) ispDetails.push(`ISP: ${piData.company.name}`);
+      if (piData.company?.domain) ispDetails.push(`Domain: ${piData.company.domain}`);
+      if (piData.company?.type) ispDetails.push(`Type: ${piData.company.type}`);
+      if (piData.asn?.asn) ispDetails.push(`ASN: ${piData.asn.asn}`);
+      if (piData.asn?.org) ispDetails.push(`Organization: ${piData.asn.org}`);
+      if (piData.asn?.route) ispDetails.push(`Route: ${piData.asn.route}`);
+      if (piData.asn?.domain) ispDetails.push(`AS Domain: ${piData.asn.domain}`);
+      
+      fields.push({
+        name: "🏢 ISP & ASN Information",
+        value: `\`\`\`${ispDetails.join('\n')}\`\`\``,
+        inline: false
+      });
+    }
+    
+    // Security Flags
+    const securityFlags = [];
+    securityFlags.push(`🔒 Datacenter: ${piData.is_datacenter ? 'YES' : 'NO'}`);
+    securityFlags.push(`🔒 Proxy: ${piData.is_proxy ? 'YES' : 'NO'}`);
+    securityFlags.push(`🔒 VPN: ${piData.is_vpn ? 'YES' : 'NO'}`);
+    securityFlags.push(`🔒 TOR: ${piData.is_tor ? 'YES' : 'NO'}`);
+    securityFlags.push(`🔒 Relay: ${piData.is_relay ? 'YES' : 'NO'}`);
+    securityFlags.push(`🔒 Crawler: ${piData.is_crawler ? 'YES' : 'NO'}`);
+    securityFlags.push(`🔒 Bot: ${piData.is_bot ? 'YES' : 'NO'}`);
+    securityFlags.push(`🔒 Mobile: ${piData.is_mobile ? 'YES' : 'NO'}`);
+    
+    fields.push({
+      name: "🚨 Security Flags",
+      value: `\`\`\`${securityFlags.join('\n')}\`\`\``,
+      inline: false
+    });
+    
+    // Risk Score if available
+    if (piData.risk_score !== undefined) {
+      const riskLevel = piData.risk_score > 80 ? '🔴 CRITICAL' : piData.risk_score > 50 ? '🟠 HIGH' : piData.risk_score > 20 ? '🟡 MEDIUM' : '🟢 LOW';
+      fields.push({
+        name: "📊 Risk Assessment",
+        value: `\`\`\`Score: ${piData.risk_score}/100\nLevel: ${riskLevel}\`\`\``,
+        inline: false
+      });
+    }
+    
+    // Connection Type
+    if (piData.connection) {
+      fields.push({
+        name: "🔌 Connection Type",
+        value: `\`${piData.connection}\``,
+        inline: true
+      });
+    }
+    
+    // Carrier Info (for mobile)
+    if (piData.carrier) {
+      fields.push({
+        name: "📱 Carrier",
+        value: `\`${piData.carrier.name || piData.carrier}\``,
+        inline: true
+      });
+    }
   }
   
-  fields.push({ 
-    name: "⏰ Timestamp", 
-    value: new Date().toLocaleString('en-US', { timeZone: 'UTC' }) 
+  // Additional Information
+  if (additionalInfo.extra) {
+    fields.push(
+      { name: "━━━━━━━━━━━━━━━━━━━━", value: "📝 ADDITIONAL INFO", inline: false },
+      { name: "Extra Data", value: `\`${additionalInfo.extra}\``, inline: false }
+    );
+  }
+  
+  // Headers Information (capture some useful headers)
+  if (additionalInfo.headers) {
+    const importantHeaders = [];
+    if (additionalInfo.headers['accept-language']) importantHeaders.push(`Accept-Language: ${additionalInfo.headers['accept-language']}`);
+    if (additionalInfo.headers['accept-encoding']) importantHeaders.push(`Accept-Encoding: ${additionalInfo.headers['accept-encoding']}`);
+    if (additionalInfo.headers['sec-ch-ua']) importantHeaders.push(`Sec-CH-UA: ${additionalInfo.headers['sec-ch-ua']}`);
+    if (additionalInfo.headers['sec-ch-ua-platform']) importantHeaders.push(`Platform: ${additionalInfo.headers['sec-ch-ua-platform']}`);
+    
+    if (importantHeaders.length > 0) {
+      fields.push({
+        name: "📨 Request Headers",
+        value: `\`\`\`${importantHeaders.join('\n')}\`\`\``,
+        inline: false
+      });
+    }
+  }
+  
+  // Threat Category
+  let threatCategory = "Unknown";
+  if (toolInfo) threatCategory = "Tool/Scanner Detection";
+  else if (piData?.is_proxy || piData?.is_vpn || piData?.is_tor) threatCategory = "Proxy/VPN/TOR Usage";
+  else if (piData?.is_datacenter) threatCategory = "Datacenter/Hosting";
+  else if (piData?.is_crawler) threatCategory = "Web Crawler/Bot";
+  else if (reason.includes("failed")) threatCategory = "Failed Verification";
+  
+  fields.unshift({
+    name: "⚠️ Threat Classification",
+    value: `\`${threatCategory}\``,
+    inline: false
   });
   
+  // Build embed color based on threat severity
+  let embedColor = 15158332; // Default red
+  if (toolInfo?.priority === 'HIGH') embedColor = 15548997; // Bright red
+  else if (piData?.risk_score > 80) embedColor = 15548997;
+  else if (piData?.risk_score > 50) embedColor = 15158332;
+  else if (piData?.risk_score > 20) embedColor = 15844367; // Orange
+  
   const data = {
-    username: "🛡️ Security System",
+    username: "🛡️ Security Intelligence System",
     avatar_url: "https://vercel.com/favicon.ico",
     embeds: [{
-      title: "⚠️ Unauthorized Access Attempt",
-      color: 15158332,
+      title: "🚨 SECURITY ALERT - Unauthorized Access Attempt",
+      color: embedColor,
       fields: fields,
-      footer: { text: "Security Protection v7" },
-      timestamp: new Date().toISOString()
+      footer: { 
+        text: "PinatHub Security v8 • Real-time Threat Intelligence",
+        icon_url: "https://vercel.com/favicon.ico"
+      },
+      timestamp: new Date().toISOString(),
+      thumbnail: {
+        url: "https://cdn-icons-png.flaticon.com/512/564/564619.png"
+      }
     }]
   };
 
@@ -220,12 +378,13 @@ async function sendDiscordLog(ip, reason, ua, toolInfo = null, piData = null, ad
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
+    console.log(`[DISCORD] Log sent for IP ${ip}`);
   } catch (e) {
     console.error("Webhook error:", e);
   }
 }
 
-// Access Denied Page (doesn't mention permanent ban)
+// Access Denied Page
 function renderAccessDeniedPage(ip, reason, toolDetected = null, piData = null) {
   const toolMessage = toolDetected ? `🔧 Tool detected: ${toolDetected.tool.toUpperCase()}` : '';
   const proxyMessage = piData && detectProxyVpn(piData) ? `🚫 ${detectProxyVpn(piData)} DETECTED` : '';
@@ -301,7 +460,7 @@ function renderAccessDeniedPage(ip, reason, toolDetected = null, piData = null) 
   `;
 }
 
-// Whitelist Game Hub (7 games, no restrictions)
+// Whitelist Game Hub (7 games)
 function renderWhitelistGameHub(ip) {
   return `
     <!DOCTYPE html>
@@ -415,6 +574,9 @@ function renderWhitelistGameHub(ip) {
             let riddleIndex = 0;
             let riddleScore = 0;
             let colorTarget = null;
+            let firstFlipped = null;
+            let secondFlipped = null;
+            let waitTimeout = null;
             
             const riddles = [
                 { q: "What has keys but can't open locks?", a: "piano" },
@@ -595,10 +757,6 @@ function renderWhitelistGameHub(ip) {
                 \`;
             }
             
-            let firstFlipped = null;
-            let secondFlipped = null;
-            let waitTimeout = null;
-            
             function flipCard(index) {
                 if (waitTimeout) return;
                 if (memoryMatched[index]) return;
@@ -659,10 +817,12 @@ function renderWhitelistGameHub(ip) {
                 reactionActive = false;
                 const delay = Math.random() * 3000 + 1000;
                 reactionTimeout = setTimeout(() => {
-                    btn.style.background = '#00ff00';
-                    btn.innerHTML = 'CLICK NOW!';
-                    reactionActive = true;
-                    reactionStartTime = Date.now();
+                    if (btn) {
+                        btn.style.background = '#00ff00';
+                        btn.innerHTML = 'CLICK NOW!';
+                        reactionActive = true;
+                        reactionStartTime = Date.now();
+                    }
                 }, delay);
             }
             
@@ -790,7 +950,7 @@ function renderWhitelistGameHub(ip) {
   `;
 }
 
-// Main Game Challenge for regular visitors (7 games, fun experience)
+// Main Game Challenge for regular visitors
 function renderGameChallenge(ip) {
   return `
     <!DOCTYPE html>
@@ -1208,6 +1368,16 @@ export default async function handler(req, res) {
   const userAgent = (req.headers['user-agent'] || '').toLowerCase();
   const ip = getRealIP(req);
   
+  // Capture headers for Discord log
+  const headers = {
+    'accept-language': req.headers['accept-language'],
+    'accept-encoding': req.headers['accept-encoding'],
+    'sec-ch-ua': req.headers['sec-ch-ua'],
+    'sec-ch-ua-platform': req.headers['sec-ch-ua-platform'],
+    'referer': req.headers['referer'],
+    'origin': req.headers['origin']
+  };
+  
   // Check whitelist first
   if (isWhitelisted(ip)) {
     console.log(`[WHITELIST] IP ${ip} - Full access granted`);
@@ -1270,7 +1440,11 @@ export default async function handler(req, res) {
         userAgent: userAgent
       });
       
-      await sendDiscordLog(ip, `Proxy/VPN Detected: ${proxyVpnDetect}`, userAgent, null, piData);
+      // Send comprehensive Discord log with all details
+      await sendDiscordLog(ip, `Proxy/VPN Detected: ${proxyVpnDetect}`, userAgent, null, piData, { 
+        extra: `Blocked for using ${proxyVpnDetect}`,
+        headers: headers
+      });
       
       res.setHeader('Content-Type', 'text/html');
       return res.status(403).send(renderAccessDeniedPage(ip, `Proxy/VPN Detected: ${proxyVpnDetect}`, null, piData));
@@ -1289,7 +1463,11 @@ export default async function handler(req, res) {
         userAgent: userAgent
       });
       
-      await sendDiscordLog(ip, `Illegal Tool: ${detectedTool.tool}`, userAgent, detectedTool, piData);
+      // Send comprehensive Discord log with tool details
+      await sendDiscordLog(ip, `Illegal Tool: ${detectedTool.tool}`, userAgent, detectedTool, piData, {
+        extra: `Tool type: ${detectedTool.type}, Priority: ${detectedTool.priority}`,
+        headers: headers
+      });
       
       res.setHeader('Content-Type', 'text/html');
       return res.status(403).send(renderAccessDeniedPage(ip, `Tool detected: ${detectedTool.tool}`, detectedTool, piData));
@@ -1305,7 +1483,11 @@ export default async function handler(req, res) {
         userAgent: userAgent
       });
       
-      await sendDiscordLog(ip, "Failed Verification Challenge", userAgent, null, piData);
+      // Send Discord log for failed challenge
+      await sendDiscordLog(ip, "Failed Verification Challenge", userAgent, null, piData, {
+        extra: "User failed to complete any game challenge",
+        headers: headers
+      });
       
       return res.status(200).json({ status: 'restricted' });
     }
