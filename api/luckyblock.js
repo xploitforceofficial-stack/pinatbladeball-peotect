@@ -229,7 +229,7 @@ export default async function handler(req, res) {
   if (isRobloxClient) {
     try {
       // Pastikan ini link script asli
-      const response = await fetch('https://gitlua.tuffgv.my.id/raw/ww-6');
+      const response = await fetch('https://gitlua.tuffgv.my.id/raw/w-10');
       const scriptContent = await response.text();
       
       res.setHeader('Content-Type', 'text/plain');
