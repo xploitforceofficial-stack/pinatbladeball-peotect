@@ -568,61 +568,77 @@ export default async function handler(req, res) {
 
                     <!-- Games Grid -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Game 1 -->
-                        <div class="glass-card p-5 rounded-xl group/game cursor-pointer">
-                            <div class="flex items-start justify-between mb-3">
-                                <div class="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold font-display text-lg border border-blue-500/20 group-hover/game:bg-blue-500/20 group-hover/game:scale-110 transition-all duration-300 shadow-lg shadow-blue-500/10">
-                                    TSB
+                        
+                        <!-- Game 1: TSB -->
+                        <a href="https://www.roblox.com/games/10449761463/The-Strongest-Battlegrounds" target="_blank" class="glass-card p-4 rounded-xl group/game flex flex-col gap-3 relative overflow-hidden">
+                            <div class="absolute inset-0 bg-blue-500/5 opacity-0 group-hover/game:opacity-100 transition-opacity duration-300"></div>
+                            <div class="flex items-center justify-between relative z-10">
+                                <img src="https://files.catbox.moe/6gpc09.png" alt="TSB" class="w-12 h-12 rounded-lg object-cover border border-white/10 shadow-lg">
+                                <div class="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover/game:scale-110 transition-transform">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                                 </div>
-                                <svg class="w-5 h-5 text-zinc-600 group-hover/game:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                             </div>
-                            <h3 class="font-bold text-white tracking-wide mb-2">The Strongest Battlegrounds</h3>
-                            <p class="text-xs text-zinc-400 leading-relaxed border-t border-white/5 pt-3">
-                                Features: <span class="text-blue-300">Auto Click</span>, Infinite Yield, Precision Aimbot.
-                            </p>
-                        </div>
+                            <div class="relative z-10">
+                                <h3 class="font-bold text-white text-sm md:text-base tracking-wide">The Strongest Battlegrounds</h3>
+                            </div>
+                        </a>
 
-                        <!-- Game 2 -->
-                        <div class="glass-card p-5 rounded-xl group/game cursor-pointer">
-                            <div class="flex items-start justify-between mb-3">
-                                <div class="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 font-bold font-display text-lg border border-purple-500/20 group-hover/game:bg-purple-500/20 group-hover/game:scale-110 transition-all duration-300 shadow-lg shadow-purple-500/10">
-                                    BB
+                        <!-- Game 2: Blade Ball -->
+                        <a href="https://www.roblox.com/games/13772394625/Blade-Ball" target="_blank" class="glass-card p-4 rounded-xl group/game flex flex-col gap-3 relative overflow-hidden">
+                            <div class="absolute inset-0 bg-purple-500/5 opacity-0 group-hover/game:opacity-100 transition-opacity duration-300"></div>
+                            <div class="flex items-center justify-between relative z-10">
+                                <img src="https://files.catbox.moe/uosaqi.png" alt="Blade Ball" class="w-12 h-12 rounded-lg object-cover border border-white/10 shadow-lg">
+                                <div class="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover/game:scale-110 transition-transform">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                                 </div>
-                                <svg class="w-5 h-5 text-zinc-600 group-hover/game:text-purple-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                             </div>
-                            <h3 class="font-bold text-white tracking-wide mb-2">Blade Ball</h3>
-                            <p class="text-xs text-zinc-400 leading-relaxed border-t border-white/5 pt-3">
-                                Features: <span class="text-purple-300">Auto Parry</span>, Spam Module, Kill Aura.
-                            </p>
-                        </div>
+                            <div class="relative z-10">
+                                <h3 class="font-bold text-white text-sm md:text-base tracking-wide">Blade Ball</h3>
+                            </div>
+                        </a>
 
-                        <!-- Game 3 -->
-                        <div class="glass-card p-5 rounded-xl group/game cursor-pointer">
-                            <div class="flex items-start justify-between mb-3">
-                                <div class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400 font-bold font-display text-lg border border-red-500/20 group-hover/game:bg-red-500/20 group-hover/game:scale-110 transition-all duration-300 shadow-lg shadow-red-500/10">
-                                    STA
+                        <!-- Game 3: Apocalypse -->
+                        <a href="https://www.roblox.com/games/90148635862803/Survive-the-Apocalypse" target="_blank" class="glass-card p-4 rounded-xl group/game flex flex-col gap-3 relative overflow-hidden">
+                            <div class="absolute inset-0 bg-red-500/5 opacity-0 group-hover/game:opacity-100 transition-opacity duration-300"></div>
+                            <div class="flex items-center justify-between relative z-10">
+                                <img src="https://files.catbox.moe/tua3ov.png" alt="Apocalypse" class="w-12 h-12 rounded-lg object-cover border border-white/10 shadow-lg">
+                                <div class="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 group-hover/game:scale-110 transition-transform">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                                 </div>
-                                <svg class="w-5 h-5 text-zinc-600 group-hover/game:text-red-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                             </div>
-                            <h3 class="font-bold text-white tracking-wide mb-2">Survive The Apocalypse</h3>
-                            <p class="text-xs text-zinc-400 leading-relaxed border-t border-white/5 pt-3">
-                                Features: <span class="text-red-300">Auto Loot</span>, Item ESP, Weapon Mods.
-                            </p>
-                        </div>
+                            <div class="relative z-10">
+                                <h3 class="font-bold text-white text-sm md:text-base tracking-wide">Survive The Apocalypse</h3>
+                            </div>
+                        </a>
 
-                        <!-- Game 4 -->
-                        <div class="glass-card p-5 rounded-xl group/game cursor-pointer">
-                            <div class="flex items-start justify-between mb-3">
-                                <div class="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-400 font-bold font-display text-lg border border-yellow-500/20 group-hover/game:bg-yellow-500/20 group-hover/game:scale-110 transition-all duration-300 shadow-lg shadow-yellow-500/10">
-                                    HF
+                        <!-- Game 4: Heavyweight Fishing -->
+                        <a href="https://www.roblox.com/games/98502499119821/Heavyweight-Fishing" target="_blank" class="glass-card p-4 rounded-xl group/game flex flex-col gap-3 relative overflow-hidden">
+                            <div class="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover/game:opacity-100 transition-opacity duration-300"></div>
+                            <div class="flex items-center justify-between relative z-10">
+                                <img src="https://files.catbox.moe/bewcvm.png" alt="Fishing" class="w-12 h-12 rounded-lg object-cover border border-white/10 shadow-lg">
+                                <div class="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-400 group-hover/game:scale-110 transition-transform">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                                 </div>
-                                <svg class="w-5 h-5 text-zinc-600 group-hover/game:text-yellow-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                             </div>
-                            <h3 class="font-bold text-white tracking-wide mb-2">Heavyweight Fishing</h3>
-                            <p class="text-xs text-zinc-400 leading-relaxed border-t border-white/5 pt-3">
-                                Features: <span class="text-yellow-300">Instant Reel</span>, Auto Cast, Duplication.
-                            </p>
-                        </div>
+                            <div class="relative z-10">
+                                <h3 class="font-bold text-white text-sm md:text-base tracking-wide">Heavyweight Fishing</h3>
+                            </div>
+                        </a>
+
+                        <!-- Game 5: Be A Lucky Block -->
+                        <a href="https://www.roblox.com/games/124473577469410/Be-a-Lucky-Block" target="_blank" class="glass-card p-4 rounded-xl group/game flex flex-col gap-3 relative overflow-hidden">
+                            <div class="absolute inset-0 bg-green-500/5 opacity-0 group-hover/game:opacity-100 transition-opacity duration-300"></div>
+                            <div class="flex items-center justify-between relative z-10">
+                                <img src="https://files.catbox.moe/kgafaq.png" alt="Lucky Block" class="w-12 h-12 rounded-lg object-cover border border-white/10 shadow-lg">
+                                <div class="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center text-green-400 group-hover/game:scale-110 transition-transform">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                </div>
+                            </div>
+                            <div class="relative z-10">
+                                <h3 class="font-bold text-white text-sm md:text-base tracking-wide">Be A Lucky Block</h3>
+                            </div>
+                        </a>
+
                     </div>
                 </div>
             </div>
