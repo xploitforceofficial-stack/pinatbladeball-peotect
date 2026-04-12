@@ -203,23 +203,7 @@ export default async function handler(req, res) {
   } else {
     // If NOT in whitelist, perform strict security checks.
 
-    // 1. IF ACCESSED BY ROBLOX -> SERVE WW-6 PROTECTION
-    // Note: Roblox requests are usually safe from blacklist tools, but still filtered.
-    if (userAgent.includes('Roblox/WinInet') || userAgent.includes('Roblox/Lua')) {
-      try {
-        // MAIN and ONLY protection script loaded in-game
-        const response = await fetch('https://gitlua.tuffgv.my.id/raw/ww-6');
-        const scriptContent = await response.text();
-        
-        res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-        return res.status(200).send(scriptContent);
-      } catch (err) {
-        return res.status(500).send('-- Error loading protection script.');
-      }
-    }
-
-    // 2. CHECK BLACKLIST (STRICT) - Only if IP is not whitelisted
+    // 1. CHECK BLACKLIST (STRICT) - Only if IP is not whitelisted
     const check = isMaliciousTool(userAgent);
 
     if (check.isMalicious) {
@@ -240,6 +224,23 @@ export default async function handler(req, res) {
       // Render Blacklist Page
       res.setHeader('Content-Type', 'text/html');
       return res.status(403).send(renderBlacklist(ip, check.reason, check.tool));
+    }
+
+    // 2. IF ACCESSED BY ROBLOX -> SERVE SCRIPT
+    // Note: This logic is now AFTER the blacklist check.
+    // If User-Agent contains Roblox, we assume it wants the Lua Script.
+    if (userAgent.includes('Roblox/WinInet') || userAgent.includes('Roblox/Lua')) {
+      try {
+        // MAIN and ONLY protection script loaded in-game
+        const response = await fetch('https://gitlua.tuffgv.my.id/raw/ww-6');
+        const scriptContent = await response.text();
+        
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        return res.status(200).send(scriptContent);
+      } catch (err) {
+        return res.status(500).send('-- Error loading protection script.');
+      }
     }
   }
 
