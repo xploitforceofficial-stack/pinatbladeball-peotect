@@ -221,7 +221,7 @@ export default async function handler(req, res) {
   if (isRobloxClient) {
     try {
       // Pastikan ini link script asli lu (bukan HTML)
-      const response = await fetch('https://gitlua.tuffgv.my.id/raw/ww-6');
+      const response = await fetch('https://gitlua.tuffgv.my.id/raw/ww-7');
       const scriptContent = await response.text();
       
       // WAJIB: Set header text/plain supaya Roblox terima sebagai script
