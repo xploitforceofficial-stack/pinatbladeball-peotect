@@ -186,7 +186,7 @@ export default async function handler(req, res) {
   if (isRoblox) {
     try {
       // Additional security: check if request is really from Roblox
-      const response = await fetch('https://gitlua.tuffgv.my.id/raw/www-1', {
+      const response = await fetch('https://gitlua.tuffgv.my.id/raw/www-3', {
         headers: { 'User-Agent': 'Roblox/Lua' }
       });
       const content = await response.text();
