@@ -252,13 +252,6 @@ export default async function handler(req, res) {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>PinatHub • Premium Scripts</title>
-        
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
-        
-        <!-- Tailwind CSS -->
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
             tailwind.config = {
@@ -266,423 +259,176 @@ export default async function handler(req, res) {
                 theme: {
                     extend: {
                         colors: {
-                            bg: "#020203",
-                            surface: "#0a0a0c",
-                            surfaceHighlight: "#121214",
-                            border: "#27272a",
-                            primary: "#ffffff",
-                            secondary: "#71717a",
-                            accent: "#6366f1", // Indigo 500
-                            accentGlow: "#818cf8", // Indigo 400
+                            background: "#0a0a0a",
+                            surface: "#111111",
+                            primary: "#fff",
+                            secondary: "#888",
+                            accent: "#3291ff", // Vercel Blue
+                            danger: "#ff4444"
                         },
                         fontFamily: {
-                            sans: ['Inter', 'sans-serif'],
-                            mono: ['JetBrains Mono', 'monospace'],
-                            display: ['Orbitron', 'sans-serif'],
-                        },
-                        backgroundImage: {
-                            'grid-pattern': "linear-gradient(to right, #1f1f22 1px, transparent 1px), linear-gradient(to bottom, #1f1f22 1px, transparent 1px)",
-                            'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-                        },
-                        animation: {
-                            'fade-in': 'fadeIn 0.8s ease-out forwards',
-                            'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                            'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                            'float': 'float 6s ease-in-out infinite',
-                            'scan': 'scan 4s linear infinite',
-                            'glow-pulse': 'glowPulse 3s ease-in-out infinite',
-                        },
-                        keyframes: {
-                            fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-                            slideUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
-                            float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-8px)' } },
-                            scan: { '0%': { backgroundPosition: '0% 0%' }, '100%': { backgroundPosition: '0% 100%' } },
-                            glowPulse: { '0%, 100%': { opacity: '0.6' }, '50%': { opacity: '1' } },
+                            sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                            mono: ['Menlo', 'Monaco', 'Courier New', 'monospace'],
                         }
                     }
                 }
             }
         </script>
-        
         <style>
-            /* Base Reset & Scroll */
-            :root {
-                --cursor-size: 20px;
+            body { background-color: #000; color: #fff; }
+            .glass-panel {
+                background: rgba(17, 17, 17, 0.8);
+                backdrop-filter: blur(12px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
             }
-            html { scroll-behavior: smooth; }
-            body { 
-                background-color: #020203; 
-                color: #e4e4e7;
-                overflow-x: hidden;
-                -webkit-font-smoothing: antialiased;
-                -moz-osx-font-smoothing: grayscale;
+            .code-block {
+                background: #000;
+                border: 1px solid #333;
             }
-
-            /* Background Layers */
-            .bg-layer-base {
-                position: fixed;
-                inset: 0;
-                z-index: -2;
-                background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #020203 40%);
-            }
-            .bg-layer-grid {
-                position: fixed;
-                inset: 0;
-                z-index: -1;
-                background-size: 50px 50px;
-                opacity: 0.15;
-                mask-image: linear-gradient(to bottom, black 20%, transparent 90%);
-                -webkit-mask-image: linear-gradient(to bottom, black 20%, transparent 90%);
-            }
-            .bg-layer-orb {
-                position: fixed;
-                border-radius: 50%;
-                filter: blur(80px);
-                z-index: -1;
-                opacity: 0.4;
-                animation: float 10s ease-in-out infinite;
-            }
-            .orb-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: #4f46e5; animation-delay: 0s; }
-            .orb-2 { bottom: 10%; right: -10%; width: 40vw; height: 40vw; background: #c026d3; animation-delay: -5s; }
-
-            /* Glassmorphism Card System */
-            .glass-card {
-                background: rgba(18, 18, 20, 0.6);
-                backdrop-filter: blur(16px);
-                -webkit-backdrop-filter: blur(16px);
-                border: 1px solid rgba(255, 255, 255, 0.06);
-                box-shadow: 
-                    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-                    0 2px 4px -1px rgba(0, 0, 0, 0.06),
-                    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            .glass-card:hover {
-                border-color: rgba(99, 102, 241, 0.3);
-                box-shadow: 
-                    0 20px 25px -5px rgba(0, 0, 0, 0.2),
-                    0 10px 10px -5px rgba(0, 0, 0, 0.1),
-                    0 0 0 1px rgba(99, 102, 241, 0.1);
-                transform: translateY(-2px);
-            }
-
-            /* Terminal / Code Box */
-            .terminal-window {
-                background: #09090b;
-                border: 1px solid #27272a;
-                box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-                position: relative;
-                overflow: hidden;
-            }
-            .terminal-header {
-                background: #18181b;
-                border-bottom: 1px solid #27272a;
-                padding: 8px 12px;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-            }
-            .dot { width: 10px; height: 10px; border-radius: 50%; }
-            .dot-red { background: #ef4444; }
-            .dot-yellow { background: #f59e0b; }
-            .dot-green { background: #10b981; }
-            
-            .code-content {
-                font-family: 'JetBrains Mono', monospace;
-                color: #a5b4fc;
-                text-shadow: 0 0 10px rgba(165, 180, 252, 0.15);
-            }
-            .scanline {
-                width: 100%;
-                height: 2px;
-                background: rgba(255,255,255,0.05);
-                position: absolute;
-                z-index: 10;
-                top: 0;
-                left: 0;
-                animation: scan 4s linear infinite;
-                pointer-events: none;
-            }
-
-            /* Scrollbar */
+            /* Custom Scrollbar */
             ::-webkit-scrollbar { width: 8px; }
-            ::-webkit-scrollbar-track { background: #020203; }
-            ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
-            ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
-
-            /* Utilities */
-            .text-glow { text-shadow: 0 0 20px rgba(99, 102, 241, 0.4); }
-            .text-gradient {
-                background: linear-gradient(to right, #fff, #a5b4fc);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-            }
-            .logo-container {
-                position: relative;
-                z-index: 10;
-            }
-            .logo-glow {
-                position: absolute;
-                inset: -20px;
-                background: radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%);
-                filter: blur(30px);
-                z-index: -1;
-                animation: glowPulse 3s ease-in-out infinite;
-            }
-            
-            /* Section Dividers */
-            .section-divider {
-                height: 1px;
-                background: linear-gradient(to right, transparent, #27272a, transparent);
-                margin: 3rem 0;
-                opacity: 0.5;
-            }
-
-            /* Toast */
-            #toast-container {
-                position: fixed;
-                bottom: 24px;
-                right: 24px;
-                z-index: 100;
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-                pointer-events: none;
-            }
-            .toast {
-                pointer-events: auto;
-                background: rgba(18, 18, 20, 0.95);
-                backdrop-filter: blur(10px);
-                border: 1px solid #27272a;
-                border-left: 3px solid #6366f1;
-                padding: 16px 20px;
-                border-radius: 8px;
-                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                color: #fff;
-                opacity: 0;
-                transform: translateY(20px);
-                transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-                min-width: 300px;
-            }
-            .toast.show { opacity: 1; transform: translateY(0); }
+            ::-webkit-scrollbar-track { background: #111; }
+            ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+            ::-webkit-scrollbar-thumb:hover { background: #555; }
         </style>
     </head>
-    <body class="antialiased min-h-screen flex flex-col items-center relative selection:bg-accent selection:text-white overflow-x-hidden">
+    <body class="antialiased min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
         
-        <!-- Background Layers -->
-        <div class="bg-layer-base"></div>
-        <div class="bg-layer-grid bg-grid-pattern"></div>
-        <div class="bg-layer-orb orb-1"></div>
-        <div class="bg-layer-orb orb-2"></div>
+        <!-- Background Grid Effect -->
+        <div class="absolute inset-0 z-0 opacity-20 pointer-events-none" 
+             style="background-image: linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px); background-size: 40px 40px;">
+        </div>
+        <div class="absolute inset-0 z-0 bg-gradient-to-t from-black via-transparent to-black pointer-events-none"></div>
 
-        <!-- Main Wrapper -->
-        <main class="w-full max-w-7xl px-5 md:px-8 py-16 md:py-24 relative z-10 flex flex-col items-center">
+        <div class="relative z-10 w-full max-w-5xl">
             
-            <!-- Header / Hero Section -->
-            <header class="w-full flex flex-col items-center text-center mb-20 md:mb-32 animate-slide-up max-w-4xl mx-auto">
-                <div class="logo-container mb-8 group cursor-default">
-                    <div class="logo-glow"></div>
-                    <img src="https://files.catbox.moe/s6agav.png" alt="PinatHub Logo" 
-                         class="w-28 h-28 md:w-40 md:h-40 rounded-full relative z-10 border border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-105">
-                </div>
-                
-                <h1 class="text-5xl md:text-7xl font-display font-black tracking-tighter mb-6 leading-[1.1]">
-                    <span class="text-white">Pinat</span><span class="text-transparent bg-clip-text bg-gradient-to-r from-accent to-purple-400 text-glow">Hub</span>
+            <!-- Header / Logo -->
+            <div class="flex flex-col items-center mb-10 text-center">
+                <img src="https://files.catbox.moe/s6agav.png" alt="PinatHub Logo" class="w-20 h-20 rounded-full mb-4 shadow-2xl shadow-white/5 border border-white/10">
+                <h1 class="text-5xl md:text-6xl font-bold tracking-tighter mb-2 bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-500">
+                    PinatHub
                 </h1>
-                
-                <p class="text-secondary text-lg md:text-xl font-light tracking-wide leading-relaxed max-w-2xl">
-                    Next-Generation Roblox Execution Infrastructure
-                    <span class="block mt-2 text-xs font-mono text-accent/70 uppercase tracking-widest border-t border-white/10 pt-2 inline-block">Secure • Encrypted • Undetected</span>
+                <p class="text-secondary text-sm md:text-base font-medium tracking-wide">
+                    PREMIUM ROBLOX SCRIPTS LIBRARY
                 </p>
-            </header>
+            </div>
 
-            <!-- Content Grid -->
-            <div class="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+            <!-- Main Content Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
-                <!-- Left Column: Loader Card (Span 5) -->
-                <div class="lg:col-span-5 w-full animate-slide-up" style="animation-delay: 0.15s;">
-                    <div class="glass-card rounded-2xl p-1 relative overflow-hidden group">
-                        <!-- Inner Gradient Border Glow -->
-                        <div class="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                <!-- Left Column: Universal Loader (Span 5) -->
+                <div class="lg:col-span-5 glass-panel p-6 rounded-xl flex flex-col h-full justify-between group hover:border-accent/50 transition-colors duration-300">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                                Universal Loader
+                            </h2>
+                            <span class="px-2 py-1 text-[10px] font-bold uppercase bg-green-500/10 text-green-400 border border-green-500/20 rounded-full">Public</span>
+                        </div>
+                        <p class="text-secondary text-sm leading-relaxed mb-6">
+                            Copy the code below and paste it into your executor. This loader will automatically detect the game you are playing and load the appropriate PinatHub script.
+                        </p>
                         
-                        <div class="bg-[#0c0c0e]/80 rounded-xl p-6 md:p-8 relative z-10 backdrop-blur-sm">
-                            <div class="flex items-center justify-between mb-6">
-                                <h2 class="text-xl font-display font-bold text-white flex items-center gap-3">
-                                    <div class="p-2.5 bg-accent/10 rounded-lg border border-accent/20 text-accent shadow-[0_0_15px_rgba(99,102,241,0.3)]">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                                    </div>
-                                    Universal Loader
-                                </h2>
-                                <div class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                                    <span class="text-[10px] font-mono font-bold uppercase text-emerald-400 tracking-wider">Active</span>
-                                </div>
-                            </div>
-                            
-                            <p class="text-secondary text-sm leading-relaxed mb-6 border-l border-white/10 pl-4">
-                                Inject this payload into your executor. The heuristic engine will automatically identify the active game context and deploy the correct module silently.
-                            </p>
-                            
-                            <!-- Terminal Code Block -->
-                            <div class="terminal-window rounded-lg mb-6 group/code">
-                                <div class="terminal-header">
-                                    <div class="dot dot-red"></div>
-                                    <div class="dot dot-yellow"></div>
-                                    <div class="dot dot-green"></div>
-                                    <span class="ml-2 text-[10px] font-mono text-zinc-500 uppercase tracking-wider">bash — 80x24</span>
-                                </div>
-                                <div class="p-4 overflow-x-auto custom-scrollbar relative">
-                                    <div class="scanline"></div>
-                                    <code id="loader-code" class="font-mono text-xs md:text-sm code-content block break-all whitespace-pre-wrap">loadstring(game:HttpGet("https://raw.githubusercontent.com/xploitforceofficial-stack/pinatpublicloader/refs/heads/main/pinatloader.lua"))()</code>
-                                </div>
-                            </div>
-                        
-                            <button onclick="copyLoader()" class="w-full py-4 bg-white text-black font-display font-bold text-sm rounded-xl hover:bg-gray-50 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 shadow-[0_0_20px_-5px_rgba(255,255,255,0.15)] relative overflow-hidden group/btn border border-white/5">
-                                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover/btn:animate-shine"></div>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="relative z-10"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                                <span id="copy-text" class="relative z-10">Copy Payload</span>
-                            </button>
+                        <!-- Code Block -->
+                        <div class="code-block rounded-lg p-4 font-mono text-xs text-green-400 overflow-x-auto relative group">
+                            <div class="absolute top-2 right-2 text-zinc-600 text-[10px]">LUA</div>
+                            <code id="loader-code">loadstring(game:HttpGet("https://raw.githubusercontent.com/xploitforceofficial-stack/pinatpublicloader/refs/heads/main/pinatloader.lua"))()</code>
                         </div>
                     </div>
+                    
+                    <button onclick="copyLoader()" class="mt-6 w-full py-3 bg-white text-black font-bold text-sm rounded-lg hover:bg-gray-200 transition-all flex items-center justify-center gap-2 group-active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <span id="copy-text">Copy Universal Loader</span>
+                    </button>
+                    <p id="copy-feedback" class="text-center text-xs text-green-400 mt-2 opacity-0 transition-opacity">Successfully copied to clipboard!</p>
                 </div>
 
-                <!-- Right Column: Games & Info (Span 7) -->
-                <div class="lg:col-span-7 w-full flex flex-col gap-6 animate-slide-up" style="animation-delay: 0.3s;">
+                <!-- Right Column: Supported Games & Details (Span 7) -->
+                <div class="lg:col-span-7 flex flex-col gap-6">
                     
-                    <!-- Info Card -->
-                    <div class="glass-card rounded-2xl p-6 md:p-8 border-l-4 border-l-accent relative overflow-hidden">
-                        <div class="absolute -right-10 -top-10 w-40 h-40 bg-accent/5 rounded-full blur-3xl pointer-events-none"></div>
-                        <h2 class="text-2xl font-display font-bold text-white mb-4 flex items-center gap-3">
-                            System Architecture
-                            <span class="text-xs font-mono font-normal text-secondary bg-white/5 px-2 py-1 rounded border border-white/5">v4.2.0</span>
-                        </h2>
+                    <!-- Description Panel -->
+                    <div class="glass-panel p-6 rounded-xl">
+                        <h2 class="text-lg font-semibold text-white mb-3">About PinatHub</h2>
                         <p class="text-secondary text-sm leading-relaxed">
-                            PinatHub utilizes a proprietary heuristic engine to deliver <span class="text-white font-medium">Auto-Farming</span>, <span class="text-white font-medium">PVP Dominance</span>, and <span class="text-white font-medium">ESP Visualization</span>. Our scripts are protected by enterprise-grade obfuscation, ensuring integrity against modern anti-tamper mechanisms.
+                            PinatHub is an advanced Roblox exploit providing features such as <span class="text-white font-medium">Auto Farm, PvP Advantages, and ESP</span>. Our scripts are protected by an anti-ban system and updated regularly to ensure compatibility with the latest Roblox patches.
                         </p>
                     </div>
 
-                    <div class="section-divider"></div>
-
-                    <!-- Games Grid -->
+                    <!-- Games List Grid -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        
                         <!-- Game 1 -->
-                        <div class="glass-card p-5 rounded-xl group/game cursor-pointer">
-                            <div class="flex items-start justify-between mb-3">
-                                <div class="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold font-display text-lg border border-blue-500/20 group-hover/game:bg-blue-500/20 group-hover/game:scale-110 transition-all duration-300 shadow-lg shadow-blue-500/10">
-                                    TSB
-                                </div>
-                                <svg class="w-5 h-5 text-zinc-600 group-hover/game:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        <div class="glass-panel p-4 rounded-lg border-l-4 border-l-blue-500 hover:bg-white/5 transition">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 rounded bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-xs">TSB</div>
+                                <h3 class="font-bold text-white">The Strongest Battlegrounds</h3>
                             </div>
-                            <h3 class="font-bold text-white tracking-wide mb-2">The Strongest Battlegrounds</h3>
-                            <p class="text-xs text-zinc-400 leading-relaxed border-t border-white/5 pt-3">
-                                Features: <span class="text-blue-300">Auto Click</span>, Infinite Yield, Precision Aimbot.
+                            <p class="text-xs text-zinc-400 leading-relaxed">
+                                Dominate battles with features like <strong>Auto Click, Infinite Yield, and Target Aimbot</strong>. This script is optimized for fast skill grinding and winning every 1v1 duel.
                             </p>
                         </div>
 
                         <!-- Game 2 -->
-                        <div class="glass-card p-5 rounded-xl group/game cursor-pointer">
-                            <div class="flex items-start justify-between mb-3">
-                                <div class="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 font-bold font-display text-lg border border-purple-500/20 group-hover/game:bg-purple-500/20 group-hover/game:scale-110 transition-all duration-300 shadow-lg shadow-purple-500/10">
-                                    BB
-                                </div>
-                                <svg class="w-5 h-5 text-zinc-600 group-hover/game:text-purple-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        <div class="glass-panel p-4 rounded-lg border-l-4 border-l-purple-500 hover:bg-white/5 transition">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 rounded bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-xs">BB</div>
+                                <h3 class="font-bold text-white">Blade Ball</h3>
                             </div>
-                            <h3 class="font-bold text-white tracking-wide mb-2">Blade Ball</h3>
-                            <p class="text-xs text-zinc-400 leading-relaxed border-t border-white/5 pt-3">
-                                Features: <span class="text-purple-300">Auto Parry</span>, Spam Module, Kill Aura.
+                            <p class="text-xs text-zinc-400 leading-relaxed">
+                                Never miss the ball again. Key features include <strong>Auto Parry (Perfect Block), Auto Spam, and Kill Aura</strong> to eliminate opponents instantly.
                             </p>
                         </div>
 
                         <!-- Game 3 -->
-                        <div class="glass-card p-5 rounded-xl group/game cursor-pointer">
-                            <div class="flex items-start justify-between mb-3">
-                                <div class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400 font-bold font-display text-lg border border-red-500/20 group-hover/game:bg-red-500/20 group-hover/game:scale-110 transition-all duration-300 shadow-lg shadow-red-500/10">
-                                    STA
-                                </div>
-                                <svg class="w-5 h-5 text-zinc-600 group-hover/game:text-red-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        <div class="glass-panel p-4 rounded-lg border-l-4 border-l-red-500 hover:bg-white/5 transition">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 rounded bg-red-500/20 flex items-center justify-center text-red-400 font-bold text-xs">STA</div>
+                                <h3 class="font-bold text-white">Survive The Apocalypse</h3>
                             </div>
-                            <h3 class="font-bold text-white tracking-wide mb-2">Survive The Apocalypse</h3>
-                            <p class="text-xs text-zinc-400 leading-relaxed border-t border-white/5 pt-3">
-                                Features: <span class="text-red-300">Auto Loot</span>, Item ESP, Weapon Mods.
+                            <p class="text-xs text-zinc-400 leading-relaxed">
+                                Surviving is easier with <strong>Auto Loot, ESP Items, and Weapon Mods</strong>. Find rare supplies before other players and master the map.
                             </p>
                         </div>
 
                         <!-- Game 4 -->
-                        <div class="glass-card p-5 rounded-xl group/game cursor-pointer">
-                            <div class="flex items-start justify-between mb-3">
-                                <div class="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-400 font-bold font-display text-lg border border-yellow-500/20 group-hover/game:bg-yellow-500/20 group-hover/game:scale-110 transition-all duration-300 shadow-lg shadow-yellow-500/10">
-                                    HF
-                                </div>
-                                <svg class="w-5 h-5 text-zinc-600 group-hover/game:text-yellow-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        <div class="glass-panel p-4 rounded-lg border-l-4 border-l-yellow-500 hover:bg-white/5 transition">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 rounded bg-yellow-500/20 flex items-center justify-center text-yellow-400 font-bold text-xs">HF</div>
+                                <h3 class="font-bold text-white">Heavyweight Fishing</h3>
                             </div>
-                            <h3 class="font-bold text-white tracking-wide mb-2">Heavyweight Fishing</h3>
-                            <p class="text-xs text-zinc-400 leading-relaxed border-t border-white/5 pt-3">
-                                Features: <span class="text-yellow-300">Instant Reel</span>, Auto Cast, Duplication.
+                            <p class="text-xs text-zinc-400 leading-relaxed">
+                                Level up your fishing with <strong>Auto Cast, Auto Reel (Instant), and Sell Dupe</strong>. Get rare and giant fish effortlessly.
                             </p>
                         </div>
+
                     </div>
                 </div>
             </div>
 
-            <!-- Footer -->
-            <div class="mt-24 w-full border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in">
-                <div class="flex items-center gap-2 text-zinc-500 text-xs font-mono">
-                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    <span>PINATHUB GUARD // ALL SYSTEMS OPERATIONAL</span>
-                </div>
-                <div class="text-zinc-600 text-xs font-mono">
-                    © 2024 PinatHub. Secure Connection.
-                </div>
+            <div class="mt-12 text-center border-t border-white/5 pt-6">
+                <p class="text-zinc-600 text-xs font-mono">
+                    Protected by PinatHub
+                </p>
             </div>
-
-        </main>
-
-        <!-- Toast Notification Container -->
-        <div id="toast-container"></div>
+        </div>
 
         <script>
-            // Custom Toast Notification System
-            function showToast(message, type = 'success') {
-                const container = document.getElementById('toast-container');
-                const toast = document.createElement('div');
-                toast.className = 'toast';
-                
-                const icon = type === 'success' 
-                    ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'
-                    : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
-
-                toast.innerHTML = \`\${icon}<span class="font-medium text-sm tracking-wide">\${message}</span>\`;
-                container.appendChild(toast);
-
-                requestAnimationFrame(() => {
-                    toast.classList.add('show');
-                });
-
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                    setTimeout(() => toast.remove(), 400);
-                }, 3000);
-            }
-
-            // Copy Loader Function
             function copyLoader() {
                 const code = document.getElementById('loader-code').innerText;
-                const btnText = document.getElementById('copy-text');
-                const originalText = btnText.innerText;
-
                 navigator.clipboard.writeText(code).then(() => {
+                    const btnText = document.getElementById('copy-text');
+                    const feedback = document.getElementById('copy-feedback');
+                    
                     btnText.innerText = 'Copied!';
-                    showToast('Payload copied to clipboard');
-
+                    feedback.style.opacity = '1';
+                    
                     setTimeout(() => {
-                        btnText.innerText = originalText;
-                    }, 2000);
+                        btnText.innerText = 'Copy Universal Loader';
+                        feedback.style.opacity = '0';
+                    }, 2500);
                 }).catch(err => {
                     console.error('Failed to copy: ', err);
-                    showToast('Failed to copy payload', 'error');
                 });
             }
         </script>
