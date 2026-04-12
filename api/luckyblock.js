@@ -86,11 +86,21 @@ function renderBlacklist(ip, reason, tool) {
   `;
 }
 
-// --- LOGIC: STRICT TOOL DETECTION (200+ PATTERNS) ---
+// --- LOGIC: TOOL DETECTION (DILEDUPKAN UNTUK ROBLOX) ---
 function isMaliciousTool(userAgent) {
-  if (!userAgent || userAgent.length < 15) return { isMalicious: true, reason: 'Empty/Invalid UA', tool: 'Unknown' };
+  // Jika UA kosong, kita anggap aman (bisa terjadi di Roblox)
+  if (!userAgent) return { isMalicious: false, reason: 'Empty UA (Allowed)', tool: null };
   
   const ua = userAgent.toLowerCase();
+  
+  // 🔥 FIX PENTING: JANGAN BLACKLIST ROBLOX
+  // Jika UA mengandung kata kunci Roblox, langsung anggap AMAN
+  if (ua.includes("roblox") || ua.includes("wininet") || ua.includes("lua")) {
+      return { isMalicious: false, reason: 'Roblox Client', tool: null };
+  }
+
+  // Jika UA terlalu pendek (bukan browser beneran)
+  if (userAgent.length < 15) return { isMalicious: true, reason: 'Empty/Invalid UA', tool: 'Unknown' };
   
   const maliciousPatterns = [
     'curl', 'wget', 'aria2', 'axel', 'httrack', 'httpie', 'postman', 'insomnia', 'bruno', 'swagger', 
@@ -188,9 +198,8 @@ export default async function handler(req, res) {
   // --- STEP 1: SECURITY BYPASS ---
   if (WHITELISTED_IPS.includes(ip)) {
     console.log(`[ACCESS ALLOWED] Whitelisted IP detected: ${ip}`);
-    // Lanjut ke logika routing (JANGAN RETURN DISINI)
   } else {
-    // --- STEP 2: CHECK BLACKLIST (STRICT) ---
+    // --- STEP 2: CHECK BLACKLIST (LOOSE MODE) ---
     const check = isMaliciousTool(userAgent);
     if (check.isMalicious) {
       try {
@@ -210,32 +219,29 @@ export default async function handler(req, res) {
 
   // --- STEP 3: INTELLIGENT CLIENT DETECTION (ROBLOX VS BROWSER) ---
   
-  // Definisi User-Agent yang dianggap Roblox/Executor
-  // Kita gunakan pendekatan "Loose" biar ga gampang ke-block
+  // Deteksi Roblox Client
   const isRobloxClient = 
     ua.includes("roblox") || 
     ua.includes("wininet") || 
     ua.includes("lua");
 
-  // Jika terdeteksi sebagai Roblox/Executor -> KIRIM SCRIPT LUA
+  // Jika Roblox -> KIRIM SCRIPT
   if (isRobloxClient) {
     try {
-      // Pastikan ini link script asli lu (bukan HTML)
-      const response = await fetch('https://gitlua.tuffgv.my.id/raw/ww-7');
+      // Pastikan ini link script asli
+      const response = await fetch('https://gitlua.tuffgv.my.id/raw/ww-6');
       const scriptContent = await response.text();
       
-      // WAJIB: Set header text/plain supaya Roblox terima sebagai script
       res.setHeader('Content-Type', 'text/plain');
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
       return res.status(200).send(scriptContent);
     } catch (err) {
-      // Fallback error kalau script server lu down
       return res.status(500).send('print("Error loading script from source")');
     }
   }
 
   // --- STEP 4: FALLBACK (NORMAL BROWSER) ---
-  // Kalau sampai sini, berarti bukan Roblox/Executor -> Tampilkan UI Premium
+  // Kalau bukan Roblox -> Tampilkan UI Premium
   res.setHeader('Content-Type', 'text/html');
   return res.status(200).send(`
     <!DOCTYPE html>
@@ -264,8 +270,8 @@ export default async function handler(req, res) {
                             border: "#27272a",
                             primary: "#ffffff",
                             secondary: "#71717a",
-                            accent: "#6366f1", // Indigo 500
-                            accentGlow: "#818cf8", // Indigo 400
+                            accent: "#6366f1",
+                            accentGlow: "#818cf8",
                         },
                         fontFamily: {
                             sans: ['Inter', 'sans-serif'],
@@ -298,9 +304,7 @@ export default async function handler(req, res) {
         
         <style>
             /* Base Reset & Scroll */
-            :root {
-                --cursor-size: 20px;
-            }
+            :root { --cursor-size: 20px; }
             html { scroll-behavior: smooth; }
             body { 
                 background-color: #020203; 
