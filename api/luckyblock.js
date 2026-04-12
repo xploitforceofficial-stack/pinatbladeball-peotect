@@ -3,7 +3,6 @@ import { MongoClient } from 'mongodb';
 const client = new MongoClient(process.env.MONGODB_URI);
 
 // --- CONFIGURATION: WHITELISTED IPs ---
-// These IPs will bypass all security checks (Blacklist & Tool Detection)
 const WHITELISTED_IPS = [
     '202.58.78.13', 
     // You can add other IPs here if needed
@@ -23,7 +22,7 @@ async function sendDiscordLog(ip, reason, ua, tool) {
         avatar_url: "https://files.catbox.moe/s6agav.png",
         embeds: [{
           title: "⚠️ PERMANENT BLACKLIST TRIGGERED",
-          color: 9838400, // Dark Red
+          color: 9838400,
           fields: [
             { name: "🚫 IP Address", value: `\`${ip}\``, inline: true },
             { name: "🔍 Threat", value: `\`${tool || 'Unknown'}\``, inline: true },
@@ -94,23 +93,19 @@ function isMaliciousTool(userAgent) {
   const ua = userAgent.toLowerCase();
   
   const maliciousPatterns = [
-    // HTTP Clients & Downloaders
     'curl', 'wget', 'aria2', 'axel', 'httrack', 'httpie', 'postman', 'insomnia', 'bruno', 'swagger', 
     'openapi', 'graphql', 'python-requests', 'aiohttp', 'httpx', 'urllib', 'pycurl', 'scrapy', 'beautifulsoup',
     'mechanize', 'selenium', 'puppeteer', 'playwright', 'phantomjs', 'headless', 'chrome-headless', 'webkit',
     'geckodriver', 'chromedriver', 'node-fetch', 'axios', 'superagent', 'got', 'undici', 'request', 'http',
     'https', 'curl/', 'wget/', 'libwww-perl', 'lwp-trivial', 'libcurl', 'winhttp',
     
-    // Programming Languages & Runtimes
     'python', 'java/', 'jdk', 'jre', 'ruby', 'perl', 'php', 'golang', 'go-http', 'rust', 'curl/', 'node', 
     'npm/', 'yarn/', 'pip/', 'maven', 'gradle', 'composer', 'nuget', 'cargo', 'go-', 'dart/',
     
-    // Pentest & Security Tools
     'nmap', 'masscan', 'zmap', 'gobuster', 'dirb', 'dirbuster', 'wfuzz', 'ffuf', 'nikto', 'wapiti', 'zap', 
     'burp', 'sqlmap', 'hydra', 'medusa', 'john', 'hashcat', 'metasploit', 'beef', 'xsser', 'commix', 
     'dnsrecon', 'theharvester', 'recon-ng', 'sn1per', 'autosploit', 'shodan', 'censys', 'binaryedge',
     
-    // Bots & Spiders
     'bot', 'spider', 'crawler', 'scraper', 'scraping', 'crawl', 'slurp', 'spider', 'curl', 'wget', 
     'python-urllib', 'libwww', 'lwp::simple', 'httpunit', 'htmlunit', 'jakarta', 'pippo', 'grub',
     'architextspider', 'xenu', 'zeus', 'checkbot', 'linkbot', 'linkwalker', 'scooter', 'mercator',
@@ -122,16 +117,13 @@ function isMaliciousTool(userAgent) {
     'emacs-w3', 'ewbrowser', 'galeon', 'ibrowse', 'icab', 'konqueror', 'links', 'lynx', 'omniweb',
     'opera', 'oregano', 'safari', 'voyager', 'w3m', 'curl', 'wget', 'python', 'java', 'perl', 'php',
     
-    // Suspicious Headers/Proxies
     'vpn', 'proxy', 'tor/', 'tord', 'vps', 'hosting', 'cloud', 'server', 'scan', 'audit', 'test',
     'monitor', 'check', 'health', 'ping', 'trace', 'route', 'whois', 'dig', 'nslookup', 'bind',
     
-    // Libraries often used for scraping
     'cheerio', 'jsdom', 'axios', 'superagent', 'request-promise', 'node-superfetch', 'node-fetch',
     'unirest', 'fetch-api', 'restsharp', 'resteasy', 'retrofit', 'volley', 'okhttp', 'asynchttpclient',
     'httpurlconnection', 'httpclient', 'webclient', 'resttemplate', 'feign', 'axis', 'cxf', 'jaxrs',
     
-    // Mobile & Others
     'okhttp', 'dart:io', 'java/', 'dalvik/', 'linux', 'android', 'iphone', 'ipad', 'ipod', 'windows',
     'macintosh', 'mac os x', 'x11', 'ubuntu', 'debian', 'fedora', 'centos', 'red hat', 'suse',
     'mandriva', 'gentoo', 'slackware', 'arch', 'freebsd', 'openbsd', 'netbsd', 'sunos', 'solaris',
@@ -190,24 +182,17 @@ function isMaliciousTool(userAgent) {
 
 export default async function handler(req, res) {
   const userAgent = req.headers['user-agent'] || '';
-  // Handle potential multiple IPs in x-forwarded-for, take the first one (client IP)
+  const ua = userAgent.toLowerCase();
   const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
-  // --- SECURITY BYPASS: WHITELIST CHECK ---
-  // If IP is in the whitelist, bypass all security checks.
+  // --- STEP 1: SECURITY BYPASS ---
   if (WHITELISTED_IPS.includes(ip)) {
     console.log(`[ACCESS ALLOWED] Whitelisted IP detected: ${ip}`);
-    
-    // Proceed to normal endpoint logic (Roblox vs Browser)
-    // BUT we don't need to check blacklist anymore.
+    // Lanjut ke logika routing (JANGAN RETURN DISINI)
   } else {
-    // If NOT in whitelist, perform strict security checks.
-
-    // 1. CHECK BLACKLIST (STRICT) - Only if IP is not whitelisted
+    // --- STEP 2: CHECK BLACKLIST (STRICT) ---
     const check = isMaliciousTool(userAgent);
-
     if (check.isMalicious) {
-      // Database Logging (Optional)
       try {
         await client.connect();
         const db = client.db('pinat_protection');
@@ -217,34 +202,40 @@ export default async function handler(req, res) {
           { upsert: true }
         );
       } catch (e) { console.error(e); } finally { await client.close(); }
-
-      // Send Discord Log
       await sendDiscordLog(ip, check.reason, userAgent, check.tool);
-
-      // Render Blacklist Page
       res.setHeader('Content-Type', 'text/html');
       return res.status(403).send(renderBlacklist(ip, check.reason, check.tool));
     }
+  }
 
-    // 2. IF ACCESSED BY ROBLOX -> SERVE SCRIPT
-    // Note: This logic is now AFTER the blacklist check.
-    // If User-Agent contains Roblox, we assume it wants the Lua Script.
-    if (userAgent.includes('Roblox/WinInet') || userAgent.includes('Roblox/Lua')) {
-      try {
-        // MAIN and ONLY protection script loaded in-game
-        const response = await fetch('https://gitlua.tuffgv.my.id/raw/ww-6');
-        const scriptContent = await response.text();
-        
-        res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-        return res.status(200).send(scriptContent);
-      } catch (err) {
-        return res.status(500).send('-- Error loading protection script.');
-      }
+  // --- STEP 3: INTELLIGENT CLIENT DETECTION (ROBLOX VS BROWSER) ---
+  
+  // Definisi User-Agent yang dianggap Roblox/Executor
+  // Kita gunakan pendekatan "Loose" biar ga gampang ke-block
+  const isRobloxClient = 
+    ua.includes("roblox") || 
+    ua.includes("wininet") || 
+    ua.includes("lua");
+
+  // Jika terdeteksi sebagai Roblox/Executor -> KIRIM SCRIPT LUA
+  if (isRobloxClient) {
+    try {
+      // Pastikan ini link script asli lu (bukan HTML)
+      const response = await fetch('https://gitlua.tuffgv.my.id/raw/ww-6');
+      const scriptContent = await response.text();
+      
+      // WAJIB: Set header text/plain supaya Roblox terima sebagai script
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      return res.status(200).send(scriptContent);
+    } catch (err) {
+      // Fallback error kalau script server lu down
+      return res.status(500).send('print("Error loading script from source")');
     }
   }
 
-  // 3. IF NORMAL BROWSER (OR WHITELISTED USER) -> SHOW PREMIUM UI (VERCEL STYLE) WITH DETAILED GAME INFO
+  // --- STEP 4: FALLBACK (NORMAL BROWSER) ---
+  // Kalau sampai sini, berarti bukan Roblox/Executor -> Tampilkan UI Premium
   res.setHeader('Content-Type', 'text/html');
   return res.status(200).send(`
     <!DOCTYPE html>
