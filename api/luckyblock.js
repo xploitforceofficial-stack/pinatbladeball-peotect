@@ -2,6 +2,13 @@ import { MongoClient } from 'mongodb';
 
 const client = new MongoClient(process.env.MONGODB_URI);
 
+// --- CONFIGURATION: WHITELISTED IPs ---
+// These IPs will bypass all security checks (Blacklist & Tool Detection)
+const WHITELISTED_IPS = [
+    '202.58.78.13', 
+    // You can add other IPs here if needed
+];
+
 // --- CONFIGURATION: DISCORD LOGGING ---
 async function sendDiscordLog(ip, reason, ua, tool) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
@@ -183,47 +190,60 @@ function isMaliciousTool(userAgent) {
 
 export default async function handler(req, res) {
   const userAgent = req.headers['user-agent'] || '';
+  // Handle potential multiple IPs in x-forwarded-for, take the first one (client IP)
   const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
-  // 1. IF ACCESSED BY ROBLOX -> SERVE WW-6 PROTECTION
-  if (userAgent.includes('Roblox/WinInet') || userAgent.includes('Roblox/Lua')) {
-    try {
-      // MAIN and ONLY protection script loaded in-game
-      const response = await fetch('https://gitlua.tuffgv.my.id/raw/ww-6');
-      const scriptContent = await response.text();
-      
-      res.setHeader('Content-Type', 'text/plain');
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-      return res.status(200).send(scriptContent);
-    } catch (err) {
-      return res.status(500).send('-- Error loading protection script.');
+  // --- SECURITY BYPASS: WHITELIST CHECK ---
+  // If IP is in the whitelist, bypass all security checks.
+  if (WHITELISTED_IPS.includes(ip)) {
+    console.log(`[ACCESS ALLOWED] Whitelisted IP detected: ${ip}`);
+    
+    // Proceed to normal endpoint logic (Roblox vs Browser)
+    // BUT we don't need to check blacklist anymore.
+  } else {
+    // If NOT in whitelist, perform strict security checks.
+
+    // 1. IF ACCESSED BY ROBLOX -> SERVE WW-6 PROTECTION
+    // Note: Roblox requests are usually safe from blacklist tools, but still filtered.
+    if (userAgent.includes('Roblox/WinInet') || userAgent.includes('Roblox/Lua')) {
+      try {
+        // MAIN and ONLY protection script loaded in-game
+        const response = await fetch('https://gitlua.tuffgv.my.id/raw/ww-6');
+        const scriptContent = await response.text();
+        
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        return res.status(200).send(scriptContent);
+      } catch (err) {
+        return res.status(500).send('-- Error loading protection script.');
+      }
+    }
+
+    // 2. CHECK BLACKLIST (STRICT) - Only if IP is not whitelisted
+    const check = isMaliciousTool(userAgent);
+
+    if (check.isMalicious) {
+      // Database Logging (Optional)
+      try {
+        await client.connect();
+        const db = client.db('pinat_protection');
+        await db.collection('blacklisted_ips').updateOne(
+          { ip: ip }, 
+          { $set: { reason: check.reason, tool: check.tool, date: new Date() } }, 
+          { upsert: true }
+        );
+      } catch (e) { console.error(e); } finally { await client.close(); }
+
+      // Send Discord Log
+      await sendDiscordLog(ip, check.reason, userAgent, check.tool);
+
+      // Render Blacklist Page
+      res.setHeader('Content-Type', 'text/html');
+      return res.status(403).send(renderBlacklist(ip, check.reason, check.tool));
     }
   }
 
-  // 2. CHECK BLACKLIST (STRICT)
-  const check = isMaliciousTool(userAgent);
-
-  if (check.isMalicious) {
-    // Database Logging (Optional)
-    try {
-      await client.connect();
-      const db = client.db('pinat_protection');
-      await db.collection('blacklisted_ips').updateOne(
-        { ip: ip }, 
-        { $set: { reason: check.reason, tool: check.tool, date: new Date() } }, 
-        { upsert: true }
-      );
-    } catch (e) { console.error(e); } finally { await client.close(); }
-
-    // Send Discord Log
-    await sendDiscordLog(ip, check.reason, userAgent, check.tool);
-
-    // Render Blacklist Page
-    res.setHeader('Content-Type', 'text/html');
-    return res.status(403).send(renderBlacklist(ip, check.reason, check.tool));
-  }
-
-  // 3. IF NORMAL BROWSER -> SHOW PREMIUM UI (VERCEL STYLE) WITH DETAILED GAME INFO
+  // 3. IF NORMAL BROWSER (OR WHITELISTED USER) -> SHOW PREMIUM UI (VERCEL STYLE) WITH DETAILED GAME INFO
   res.setHeader('Content-Type', 'text/html');
   return res.status(200).send(`
     <!DOCTYPE html>
@@ -307,7 +327,7 @@ export default async function handler(req, res) {
                             <span class="px-2 py-1 text-[10px] font-bold uppercase bg-green-500/10 text-green-400 border border-green-500/20 rounded-full">Public</span>
                         </div>
                         <p class="text-secondary text-sm leading-relaxed mb-6">
-                            Salin kode di bawah ini dan tempelkan ke executor Anda. Loader ini akan otomatis mendeteksi game yang Anda mainkan dan memuat script PinatHub yang sesuai.
+                            Copy the code below and paste it into your executor. This loader will automatically detect the game you are playing and load the appropriate PinatHub script.
                         </p>
                         
                         <!-- Code Block -->
@@ -321,7 +341,7 @@ export default async function handler(req, res) {
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         <span id="copy-text">Copy Universal Loader</span>
                     </button>
-                    <p id="copy-feedback" class="text-center text-xs text-green-400 mt-2 opacity-0 transition-opacity">Berhasil disalin ke clipboard!</p>
+                    <p id="copy-feedback" class="text-center text-xs text-green-400 mt-2 opacity-0 transition-opacity">Successfully copied to clipboard!</p>
                 </div>
 
                 <!-- Right Column: Supported Games & Details (Span 7) -->
@@ -329,9 +349,9 @@ export default async function handler(req, res) {
                     
                     <!-- Description Panel -->
                     <div class="glass-panel p-6 rounded-xl">
-                        <h2 class="text-lg font-semibold text-white mb-3">Tentang PinatHub</h2>
+                        <h2 class="text-lg font-semibold text-white mb-3">About PinatHub</h2>
                         <p class="text-secondary text-sm leading-relaxed">
-                            PinatHub adalah eksploit Roblox tingkat lanjut yang menyediakan fitur <span class="text-white font-medium">Auto Farm, PvP Advantages, dan ESP</span>. Script kami dilindungi oleh sistem anti-ban (WW-6) dan diperbarui secara berkala untuk memastikan kompatibilitas dengan patch terbaru Roblox.
+                            PinatHub is an advanced Roblox exploit providing features such as <span class="text-white font-medium">Auto Farm, PvP Advantages, and ESP</span>. Our scripts are protected by an anti-ban system and updated regularly to ensure compatibility with the latest Roblox patches.
                         </p>
                     </div>
 
@@ -345,7 +365,7 @@ export default async function handler(req, res) {
                                 <h3 class="font-bold text-white">The Strongest Battlegrounds</h3>
                             </div>
                             <p class="text-xs text-zinc-400 leading-relaxed">
-                                Dominasi pertempuran dengan fitur <strong>Auto Click, Infinite Yield, dan Target Aimbot</strong>. Script ini dioptimalkan untuk grind skill cepat dan menang dalam setiap duel 1v1.
+                                Dominate battles with features like <strong>Auto Click, Infinite Yield, and Target Aimbot</strong>. This script is optimized for fast skill grinding and winning every 1v1 duel.
                             </p>
                         </div>
 
@@ -356,7 +376,7 @@ export default async function handler(req, res) {
                                 <h3 class="font-bold text-white">Blade Ball</h3>
                             </div>
                             <p class="text-xs text-zinc-400 leading-relaxed">
-                                Tidak pernah ketinggalan bola lagi. Fitur unggulan termasuk <strong>Auto Parry (Perfect Block), Auto Spam, dan Kill Aura</strong> untuk mengeliminasi lawan secara instan.
+                                Never miss the ball again. Key features include <strong>Auto Parry (Perfect Block), Auto Spam, and Kill Aura</strong> to eliminate opponents instantly.
                             </p>
                         </div>
 
@@ -367,7 +387,7 @@ export default async function handler(req, res) {
                                 <h3 class="font-bold text-white">Survive The Apocalypse</h3>
                             </div>
                             <p class="text-xs text-zinc-400 leading-relaxed">
-                                Bertahan hidup lebih mudah dengan <strong>Auto Loot, ESP Items, dan Weapon Mods</strong>. Temukan persediaan langka sebelum pemain lain dan kuasai peta.
+                                Surviving is easier with <strong>Auto Loot, ESP Items, and Weapon Mods</strong>. Find rare supplies before other players and master the map.
                             </p>
                         </div>
 
@@ -378,7 +398,7 @@ export default async function handler(req, res) {
                                 <h3 class="font-bold text-white">Heavyweight Fishing</h3>
                             </div>
                             <p class="text-xs text-zinc-400 leading-relaxed">
-                                Tingkatkan level memancing Anda dengan <strong>Auto Cast, Auto Reel (Instant), dan Sell Dupe</strong>. Dapatkan ikan langka dan raksasa tanpa usaha.
+                                Level up your fishing with <strong>Auto Cast, Auto Reel (Instant), and Sell Dupe</strong>. Get rare and giant fish effortlessly.
                             </p>
                         </div>
 
@@ -388,7 +408,7 @@ export default async function handler(req, res) {
 
             <div class="mt-12 text-center border-t border-white/5 pt-6">
                 <p class="text-zinc-600 text-xs font-mono">
-                    Protected by PinatHub Guard v4.0 • Endpoint secured by WW-6
+                    Protected by PinatHub
                 </p>
             </div>
         </div>
